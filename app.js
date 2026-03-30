@@ -245,17 +245,26 @@ function formatPlace(p) {
 /* ── Render Results ── */
 function renderResults(list) {
   const filtered = list.filter(r => budgetMatch(r.priceLevel));
-  const near = filtered.filter(r => r.mins <= 10);
-  const mid  = filtered.filter(r => r.mins > 10 && r.mins <= 20);
-  const far  = filtered.filter(r => r.mins > 20);
 
-  const budgetLabel = budgetMax >= 1500 ? '不限預算' : `$${budgetMax}`;
+  // 用距離三等分，確保每個區間都有資料
+  const dists = filtered.map(r => r.dist).sort((a, b) => a - b);
+  const t1 = dists[Math.floor(dists.length / 3)]     || 400;
+  const t2 = dists[Math.floor(dists.length * 2 / 3)] || 900;
+
+  const near = filtered.filter(r => r.dist <= t1);
+  const mid  = filtered.filter(r => r.dist > t1 && r.dist <= t2);
+  const far  = filtered.filter(r => r.dist > t2);
+
+  // 換算成分鐘顯示給使用者
+  const m1 = getMins(t1), m2 = getMins(t2);
+
+  const budgetLabel = budgetMax >= 1500 ? '不限預算' : `${budgetMax}`;
   document.getElementById('resSummary').textContent =
     `${filtered.length} 間 · ${transport} · ${budgetLabel}`;
 
-  renderGroup('nearList', near, '🟢 近（10 分鐘內）',   'near');
-  renderGroup('midList',  mid,  '🔵 一般（10–20 分鐘）', 'mid');
-  renderGroup('farList',  far,  '🟣 遠（20 分鐘以上）',  'far');
+  renderGroup('nearList', near, `🟢 近（${m1} 分鐘內）`,           'near');
+  renderGroup('midList',  mid,  `🔵 一般（${m1}–${m2} 分鐘）`,     'mid');
+  renderGroup('farList',  far,  `🟣 遠（${m2} 分鐘以上）`,          'far');
   showPage('resultsPage');
 }
 
