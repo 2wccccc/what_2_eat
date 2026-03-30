@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>吃什麼？— 智慧餐廳推薦</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <div class="logo" onclick="showPage('landingPage')">吃<span>什麼</span>？</div>
+  <button class="btn-login" id="loginBtn" onclick="handleLogin()">
+    <div class="g-dot"></div>
+    <span id="loginText">Google 登入</span>
+  </button>
+</nav>
+
+<!-- ── Loading Overlay ── -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="load-text" id="loadText">正在搜尋附近餐廳…</div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════
+     PAGE: LANDING
+     ════════════════════════════ -->
+<div class="page active" id="landingPage">
+
+  <div class="landing-hero">
+    <span class="landing-emoji">🍜</span>
+    <div class="landing-title">今天要吃<span>什麼</span>？<br>讓我幫你決定</div>
+    <div class="landing-sub">每天最難的問題，交給我們。根據你的位置、交通方式和心情，找到最適合的一餐。</div>
+    <button class="landing-cta" onclick="showPage('homePage'); locateMe()">開始找餐廳</button>
+  </div>
+
+  <div class="features">
+    <div class="features-title">三個核心功能</div>
+
+    <div class="feature-card">
+      <div class="feature-icon fi-blue">📍</div>
+      <div>
+        <div class="feature-name">依距離智慧分類</div>
+        <div class="feature-desc">自動取得你的位置，根據步行、騎車或開車的抵達時間，將餐廳分成近、一般、遠三個區間，並即時標示是否營業。</div>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon fi-green">⭐</div>
+      <div>
+        <div class="feature-name">Google 真實評分</div>
+        <div class="feature-desc">點擊任一餐廳，直接查看 Google Maps 的真實評分、評論數、價格範圍與餐廳照片，一鍵跳轉導航。</div>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon fi-purple">✨</div>
+      <div>
+        <div class="feature-name">AI 幫你選</div>
+        <div class="feature-desc">不知道想吃什麼？輸入心情或料理偏好，讓 Claude AI 為你推薦最適合的餐廳類型，解決選擇困難症。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="landing-footer">以 Google Places · Claude AI 提供資料</div>
+</div>
+
+<!-- ════════════════════════════
+     PAGE: HOME
+     ════════════════════════════ -->
+<div class="page" id="homePage">
+
+  <div class="hero">
+    <div class="hero-title">今天吃什麼？</div>
+    <div class="hero-sub">讓我們幫你做決定</div>
+    <button class="random-btn" onclick="searchNearby()">附近找餐廳</button>
+  </div>
+
+  <!-- AI Bar -->
+  <div class="ai-bar">
+    <div class="ai-bar-title">
+      <div class="ai-dot"></div> AI 幫你找
+    </div>
+    <div class="ai-input-row">
+      <input class="ai-input" id="aiInput"
+        placeholder="想吃什麼？（如：想吃韓式料理、便宜的拉麵…）"
+        onkeydown="if(event.key==='Enter') askAI()"/>
+      <button class="ai-send" onclick="askAI()">送出</button>
+    </div>
+    <div class="ai-result" id="aiResult"></div>
+  </div>
+
+  <!-- Error Banner -->
+  <div class="err-banner" id="errBanner"></div>
+
+  <!-- Filters -->
+  <div class="filters">
+
+    <div class="filter-row">
+      <div class="filter-label">定位</div>
+      <button class="locate-btn" onclick="locateMe()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 1v4M12 19v4M1 12h4M19 12h4"/>
+        </svg>
+        取得位置
+      </button>
+      <span class="locate-status" id="locateStatus">尚未定位</span>
+    </div>
+
+    <div class="filter-row">
+      <div class="filter-label">交通方式</div>
+      <div class="chip-group">
+        <button class="chip active" onclick="setChip(this,'transport')">步行</button>
+        <button class="chip"        onclick="setChip(this,'transport')">騎車</button>
+        <button class="chip"        onclick="setChip(this,'transport')">開車</button>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <div class="filter-label">用餐時段</div>
+      <div class="chip-group">
+        <button class="chip active" onclick="setChip(this,'meal')">早餐</button>
+        <button class="chip"        onclick="setChip(this,'meal')">午餐</button>
+        <button class="chip"        onclick="setChip(this,'meal')">晚餐</button>
+        <button class="chip"        onclick="setChip(this,'meal')">宵夜</button>
+      </div>
+    </div>
+
+    <!-- Budget Slider -->
+    <div class="filter-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+      <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+        <div class="filter-label" style="min-width:unset;">預算上限</div>
+        <div style="display:flex; align-items:baseline; gap:3px;">
+          <span style="font-size:18px; font-weight:500; color:var(--md);" id="budgetVal">300</span>
+          <span style="font-size:12px; color:var(--mm);">元／人</span>
+        </div>
+      </div>
+      <div style="width:100%; display:flex; align-items:center; gap:10px;">
+        <span style="font-size:11px; color:var(--mg);">50</span>
+        <input type="range" id="budgetSlider"
+          min="50" max="1500" step="50" value="300"
+          style="flex:1;" oninput="updateBudget(this.value)"/>
+        <span style="font-size:11px; color:var(--mg);">1500+</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; width:100%; padding:0 2px;">
+        <span style="font-size:11px; color:var(--mm);">$ 平價</span>
+        <span style="font-size:11px; color:var(--mm);">$$ 中等</span>
+        <span style="font-size:11px; color:var(--mm);">$$$ 較貴</span>
+        <span style="font-size:11px; color:var(--mm);">$$$$ 高級</span>
+      </div>
+    </div>
+
+  </div>
+
+  <button class="search-btn" onclick="searchNearby()">搜尋餐廳</button>
+</div>
+
+<!-- ════════════════════════════
+     PAGE: RESULTS
+     ════════════════════════════ -->
+<div class="page" id="resultsPage">
+
+  <div class="back-row">
+    <div class="back-btn" onclick="showPage('homePage')">← 返回</div>
+    <div style="font-size:13px; color:var(--mm);" id="resSummary"></div>
+  </div>
+
+  <div id="nearList"></div>
+  <div id="midList"></div>
+  <div id="farList"></div>
+
+</div>
+
+<!-- ════════════════════════════
+     PAGE: DETAIL
+     ════════════════════════════ -->
+<div class="page" id="detailPage">
+
+  <div class="back-row">
+    <div class="back-btn" onclick="showPage('resultsPage')">← 返回列表</div>
+  </div>
+
+  <div class="detail-card">
+    <div class="d-header">
+      <div class="d-name" id="dName"></div>
+      <div class="d-meta">
+        <span id="dDist"></span>
+        <span id="dOpen"></span>
+        <span id="dType"></span>
+      </div>
+    </div>
+    <div class="d-body">
+      <div class="photo-row" id="dPhotos"></div>
+
+      <div class="d-sec">
+        <div class="d-sec-title">餐廳特色</div>
+        <div class="d-sec-content" id="dDesc"></div>
+      </div>
+
+      <div class="d-row">
+        <span class="d-row-label">Google 評分</span>
+        <span id="dRating"></span>
+      </div>
+      <div class="d-row">
+        <span class="d-row-label">評論數</span>
+        <span id="dReviews"></span>
+      </div>
+      <div class="d-row">
+        <span class="d-row-label">價格範圍</span>
+        <span id="dPrice"></span>
+      </div>
+      <div class="d-row">
+        <span class="d-row-label">地址</span>
+        <span id="dAddr" style="text-align:right; max-width:200px; font-size:13px;"></span>
+      </div>
+      <div class="d-row">
+        <span class="d-row-label">電話</span>
+        <span id="dPhone"></span>
+      </div>
+
+      <a class="maps-btn" id="dMapsLink" href="#" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        在 Google Maps 查看
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Script ── -->
+<script src="app.js"></script>
+</body>
+</html>
