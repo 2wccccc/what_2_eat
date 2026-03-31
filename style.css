@@ -243,7 +243,7 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   border-bottom: 0.5px solid var(--bd);
   font-size: 13px; color: var(--md); font-weight: 500;
 }
-.ai-result-body { padding: 14px 16px; }
+.ai-result-body { padding: 14px 16px; min-height: 80px; }
 .ai-group-label {
   font-size: 12px; font-weight: 500; color: var(--mm);
   padding: 14px 0 8px; display: flex; align-items: center; gap: 6px;
@@ -308,11 +308,15 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .b-near { background: var(--green-p); color: var(--green); }
 .b-mid  { background: var(--mb-p);    color: var(--md); }
 .b-far  { background: #EDE9FD;        color: #534AB7; }
+
+/* 🌟 有趣的空狀態設計 */
 .empty-group {
-  text-align: center; padding: 18px; font-size: 13px; color: var(--mg);
+  text-align: center; padding: 28px 16px; font-size: 13px; color: var(--mg);
   background: white; border: 0.5px dashed var(--bd);
   border-radius: var(--r-md); margin: 0 16px 20px;
 }
+.empty-emoji { font-size: 36px; margin-bottom: 12px; }
+.empty-title { font-size: 15px; font-weight: 500; color: var(--mt); margin-bottom: 4px; }
 
 /* ══════════════════════
    DETAIL PAGE
@@ -377,6 +381,16 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 }
 .review-tag.pos { background: var(--green-p); color: var(--green); }
 .review-tag.neg { background: var(--red-p);   color: var(--red); }
+
+/* 🌟 分享按鈕區塊 */
+.action-row { display: flex; gap: 10px; margin-top: 14px; }
+.action-row .maps-btn { margin-top: 0; flex: 2; }
+.share-btn {
+  flex: 1; background: var(--mw); color: var(--mt); border: 0.5px solid var(--bd);
+  border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 14px; cursor: pointer; transition: background var(--trans); font-family: var(--font);
+}
+.share-btn:hover { background: var(--mg-l); }
 .maps-btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   background: var(--mb); color: white; border: none; border-radius: var(--r-md);
@@ -407,7 +421,7 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 #googleMap { flex: 1; }
 
 /* ══════════════════════
-   GLOBAL UI
+   GLOBAL UI & TWEAKS
 ══════════════════════ */
 .loading-overlay {
   display: none; position: fixed; inset: 0;
@@ -447,3 +461,32 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .lightbox.show { display: flex; }
 .lightbox img { max-width: 92vw; max-height: 82vh; border-radius: var(--r-md); }
 .lightbox-close { position: absolute; top: 16px; right: 18px; color: white; font-size: 28px; cursor: pointer; line-height: 1; }
+
+/* 🌟 骨架屏 Skeleton */
+.skeleton-card {
+  display: flex; gap: 14px; padding: 12px 16px; margin-bottom: 12px;
+  background: white; border: 0.5px solid var(--bd); border-radius: var(--r-md);
+}
+.sk-thumb { width: 88px; height: 88px; border-radius: 8px; flex-shrink: 0; }
+.sk-line { height: 14px; border-radius: 4px; margin-bottom: 10px; }
+.sk-line.w-70 { width: 70%; }
+.sk-line.w-40 { width: 40%; }
+.sk-anim {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%; animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* 🌟 圖片漸進式淡入 */
+img.lazy-fade { opacity: 0; animation: imgFadeIn 0.5s ease forwards; }
+@keyframes imgFadeIn { to { opacity: 1; } }
+
+/* 🌟 骰子過場動畫 */
+.dice-overlay {
+  position: fixed; inset: 0; background: rgba(247,248,250,0.92); backdrop-filter: blur(8px);
+  z-index: 400; display: none; flex-direction: column; align-items: center; justify-content: center;
+}
+.dice-overlay.show { display: flex; animation: fadeIn 0.2s ease; }
+.dice-emoji { font-size: 72px; animation: shake 0.3s infinite; margin-bottom: 24px; }
+.dice-text { font-size: 22px; font-weight: 500; color: var(--mt); text-align: center; padding: 0 20px; line-height: 1.4; }
+@keyframes shake { 0%,100%{transform:translateY(0) rotate(0)} 25%{transform:translateY(-5px) rotate(-10deg)} 75%{transform:translateY(5px) rotate(10deg)} }
