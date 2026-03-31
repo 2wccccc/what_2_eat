@@ -18,9 +18,37 @@ let aiPlacesService = null;
 let distMatrixSvc   = null;
 let mapInstance     = null;
 let mapsLoaded      = false;
+let currentWeatherCtx = '';
 
 // 目前在 detail 的店家資料（供 openMaps 使用）
 let currentDetailPlace = null;
+
+// 初始化時讀取 LocalStorage
+document.addEventListener('DOMContentLoaded', () => {
+  const savedPref = localStorage.getItem('what2eat_pref') || '想減內臟脂肪，盡量推薦健康、高蛋白或低碳水的餐點'; 
+  const prefInput = document.getElementById('userPref');
+  if(prefInput) prefInput.value = savedPref;
+});
+
+function savePref(val) {
+  localStorage.setItem('what2eat_pref', val.trim());
+  showToast('偏好已儲存');
+}
+
+// 取得天氣資訊的函式 (Open-Meteo)
+async function fetchWeather(lat, lng) {
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
+    const data = await res.json();
+    const temp = data.current_weather.temperature;
+    const code = data.current_weather.weathercode;
+    const isRaining = code >= 50; 
+    currentWeatherCtx = `目前當地天氣：氣溫 ${temp} 度C，${isRaining ? '正在下雨 (請優先推薦室內舒適、好停車或極近距離的店)' : '天氣穩定'}。`;
+  } catch(e) {
+    console.warn('天氣取得失敗', e);
+    currentWeatherCtx = '';
+  }
+}
 
 /* ══════════════════════════════════════
    Landing / App shell
@@ -51,7 +79,6 @@ function switchTab(tab) {
 }
 
 function showPage(id) {
-  // 只隱藏 appShell 內的 page
   document.querySelectorAll('#appShell .page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -184,9 +211,6 @@ function searchOnMap() {
   });
 }
 
-/* ══════════════════════════════════════
-   跨平台地圖開啟（修正手機問題）
-══════════════════════════════════════ */
 function openMaps() {
   if (!currentDetailPlace) return;
   const { name, lat, lng, placeId } = currentDetailPlace;
@@ -194,13 +218,10 @@ function openMaps() {
   const isAndroid = /Android/.test(navigator.userAgent);
 
   if (isIOS) {
-    // iOS：優先用 Apple Maps，若有座標直接用 geo
     window.location.href = `maps://?q=${encodeURIComponent(name)}&ll=${lat},${lng}`;
   } else if (isAndroid) {
-    // Android：用 geo: scheme，Google Maps App 會攔截
     window.location.href = `geo:${lat},${lng}?q=${encodeURIComponent(name)}`;
   } else {
-    // 電腦：開 Google Maps 網頁
     const url = placeId
       ? `https://www.google.com/maps/place/?q=place_id:${placeId}`
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
@@ -276,27 +297,25 @@ function formatPlace(p) {
     dist: null, mins: null,
     rating: p.rating ?? 0, reviews: p.user_ratings_total ?? 0,
     priceLevel: p.price_level,
-    isOpen: null,        // ← 必須由 getDetails 填入，nearbySearch 的值不可靠
+    isOpen: null,
     weekdayText: null,
     types: (p.types||[]).filter(t => !['food','point_of_interest','establishment'].includes(t)).slice(0, 2),
     photos, address: p.vicinity || '',
   };
 }
 
-/* ── 批次 getDetails 取得精確營業狀態（重點修正）── */
 function fetchOpenStatusBatch(list, svc) {
   return new Promise(resolve => {
     if (!svc || !list.length) { resolve(); return; }
     let pending = list.length;
     list.forEach((r, i) => {
       if (!r.placeId) { if (--pending === 0) resolve(); return; }
-      // 每筆間隔 120ms，避免超過 QPS 限制
       setTimeout(() => {
         svc.getDetails(
           { placeId: r.placeId, fields: ['opening_hours', 'utc_offset_minutes'] },
           (res, status) => {
             if (status === google.maps.places.PlacesServiceStatus.OK && res?.opening_hours) {
-              r.isOpen      = res.opening_hours.isOpen();      // 這裡才是準確的
+              r.isOpen      = res.opening_hours.isOpen();
               r.weekdayText = res.opening_hours.weekday_text || null;
             }
             if (--pending === 0) resolve();
@@ -316,7 +335,7 @@ function fallbackMins(r, pg) {
 }
 
 /* ══════════════════════════════════════
-   AI SEARCH
+   AI SEARCH (加上天氣和偏好記憶)
 ══════════════════════════════════════ */
 async function askAI() {
   const inp = document.getElementById('aiInput').value.trim();
@@ -332,12 +351,17 @@ async function askAI() {
   body.innerHTML = '<div class="loading-dots"><div class="ld"></div><div class="ld"></div><div class="ld"></div></div>';
 
   try {
-    await loadGMaps();
-    const map = createHiddenMap(pg.lat, pg.lng);
-    aiPlacesService = new google.maps.places.PlacesService(map);
-    distMatrixSvc   = new google.maps.DistanceMatrixService();
-    const raw = await nearbySearchBoth(aiPlacesService, new google.maps.LatLng(pg.lat, pg.lng), getRadius(pg.transport));
-    aiRestaurants   = raw.map(p => formatPlace(p));
+    const [_, raw] = await Promise.all([
+      fetchWeather(pg.lat, pg.lng),
+      (async () => {
+        await loadGMaps();
+        const map = createHiddenMap(pg.lat, pg.lng);
+        aiPlacesService = new google.maps.places.PlacesService(map);
+        distMatrixSvc   = new google.maps.DistanceMatrixService();
+        return await nearbySearchBoth(aiPlacesService, new google.maps.LatLng(pg.lat, pg.lng), getRadius(pg.transport));
+      })()
+    ]);
+    aiRestaurants = raw.map(p => formatPlace(p));
   } catch(e) { aiRestaurants = []; }
 
   // 交通時間
@@ -355,7 +379,7 @@ async function askAI() {
     aiRestaurants.forEach(r => fallbackMins(r, pg));
   }
 
-  // 取得營業狀態（前15間）
+  // 取得營業狀態
   header.textContent = '確認營業狀態…';
   await fetchOpenStatusBatch(aiRestaurants.slice(0, 15), aiPlacesService);
 
@@ -367,12 +391,16 @@ async function askAI() {
       }).join('\n')
     : '（無資料，請根據台中市一般情況推薦）';
 
+  const userPref = localStorage.getItem('what2eat_pref') || document.getElementById('userPref').value;
+  const prefCtx = userPref ? `使用者長期飲食偏好：「${userPref}」，請在推薦時將此條件納入考量。\n` : '';
+
   const prompt =
-    `你是台灣美食推薦助理。使用者目前在台中市附近，` +
-    `交通：${pg.transport}，時段：${pg.meal}，預算：${pg.budget >= 1500 ? '不限' : pg.budget + '元以內'}。\n\n` +
-    `需求：「${inp}」\n\n附近真實餐廳清單：\n${listCtx}\n\n` +
-    `從清單中選出最符合的 3-5 間（優先選「營業中」的），只輸出 JSON（不要其他文字）：\n` +
-    `[{"name":"店名","mins":分鐘數,"rating":評分,"priceLevel":0-4,"isOpen":true/false/null,"desc":"20字內介紹"}]`;
+    `你是台灣美食推薦助理。使用者目前在台中市附近。\n` +
+    `交通：${pg.transport}，時段：${pg.meal}，預算上限：${pg.budget >= 1500 ? '不限' : pg.budget + '元'}。\n` +
+    `${currentWeatherCtx}\n${prefCtx}\n` +
+    `當下具體需求：「${inp}」\n\n附近真實餐廳清單：\n${listCtx}\n\n` +
+    `從清單中嚴選最符合上述所有條件的 3-5 間（優先選「營業中」的），只輸出 JSON（不要其他文字）：\n` +
+    `[{"name":"店名","mins":分鐘數,"rating":評分,"priceLevel":0-4,"isOpen":true/false/null,"desc":"20字內介紹為何推薦這家(需結合天氣或偏好)"}]`;
 
   header.textContent = 'AI 分析中…';
   try {
@@ -447,7 +475,7 @@ function renderAIGroup(container, list, label, bc) {
 }
 
 /* ══════════════════════════════════════
-   GENERAL SEARCH
+   GENERAL SEARCH & DICE
 ══════════════════════════════════════ */
 async function searchNearby() {
   const pg = state.search;
@@ -470,7 +498,6 @@ async function searchNearby() {
     }
     allRestaurants = combined.map(p => formatPlace(p));
 
-    // Step 1：交通時間
     document.getElementById('loadText').textContent = '計算交通時間…';
     const times = await fetchTravelTimes(
       [new google.maps.LatLng(pg.lat, pg.lng)],
@@ -481,7 +508,6 @@ async function searchNearby() {
       if (times[i] != null) r.mins = times[i]; else fallbackMins(r, pg);
     });
 
-    // Step 2：批次取得精確營業狀態（前20間）← 這是修正重點
     document.getElementById('loadText').textContent = '確認營業狀態…';
     await fetchOpenStatusBatch(allRestaurants.slice(0, 20), placesService);
 
@@ -494,6 +520,22 @@ async function searchNearby() {
     allRestaurants = getMockData(pg);
     renderResults(allRestaurants);
   }
+}
+
+// 新增：隨機決定一間餐廳
+function pickRandom() {
+  if (!allRestaurants || allRestaurants.length === 0) {
+    showToast('請先點擊「搜尋餐廳」載入附近店家！');
+    return;
+  }
+  let pool = allRestaurants.filter(r => r.isOpen === true);
+  if (pool.length === 0) pool = allRestaurants;
+  const randomPlace = pool[Math.floor(Math.random() * pool.length)];
+  const originalIdx = allRestaurants.indexOf(randomPlace);
+  showToast('🎲 命運的安排是...');
+  setTimeout(() => {
+    showDetail(originalIdx);
+  }, 600);
 }
 
 function renderResults(list) {
@@ -559,7 +601,6 @@ function showDetail(idx) {
   const emoji = typeEmoji(r.types);
   currentDetailPlace = r;
 
-  // Hero
   const hero = document.getElementById('dHero');
   hero.innerHTML = r.photos[0]
     ? `<img class="detail-hero-img" src="${r.photos[0]}" alt="" onerror="this.outerHTML='<div class=\\'detail-hero-placeholder\\'>${emoji}</div>'">`
@@ -585,7 +626,6 @@ function showDetail(idx) {
     ? renderHoursHTML(r.weekdayText)
     : '<span style="color:var(--mg)">查詢中…</span>';
 
-  // Photos
   const ph = document.getElementById('dPhotos');
   const renderPhotos = photos => {
     ph.innerHTML = photos.length
