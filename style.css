@@ -457,3 +457,43 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   position: absolute; top: 16px; right: 18px;
   color: white; font-size: 28px; cursor: pointer; line-height: 1;
 }
+
+/* ── 搜尋結果摘要列 ── */
+.results-summary {
+  font-size: 13px; color: var(--mm);
+  padding: 10px 20px 4px;
+}
+.meal-filter-note {
+  font-size: 12px; color: var(--amber);
+  background: var(--amber-p); border-radius: var(--r-sm);
+  padding: 6px 14px; margin: 4px 16px 0;
+}
+
+/* ── AI 結果分組標題 ── */
+.ai-group-label {
+  font-size: 12px; font-weight: 500; color: var(--mm);
+  padding: 14px 0 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.ai-group-label:first-child { padding-top: 0; }
+
+/* ── AI shop card（可點擊版） ── */
+.ai-shop-card {
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--mg-l);
+}
+.ai-shop-card:last-child { border-bottom: none; padding-bottom: 0; }
+.ai-shop-card.clickable {
+  cursor: pointer;
+  transition: background var(--trans);
+  border-radius: var(--r-sm);
+  margin: 0 -8px; padding: 12px 8px;
+}
+.ai-shop-card.clickable:hover { background: var(--mb-p); }
+.ai-shop-card.clickable:active { background: var(--mb-l); }
+.ai-shop-label {
+  font-size: 12px; color: var(--mb); font-weight: 500; margin-bottom: 4px;
+}
+.ai-shop-name  { font-size: 16px; font-weight: 500; color: var(--mt); margin-bottom: 5px; }
+.ai-shop-desc  { font-size: 13px; color: var(--mm); line-height: 1.7; }
+.ai-shop-rating{ font-size: 13px; color: var(--amber); margin-top: 5px; }
