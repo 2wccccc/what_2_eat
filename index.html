@@ -12,6 +12,11 @@
   <div class="logo" onclick="showLanding()">吃<span>什麼</span>？</div>
 </nav>
 
+<div class="dice-overlay" id="diceOverlay">
+  <div class="dice-emoji">🎲</div>
+  <div class="dice-text" id="diceText">抽籤中...</div>
+</div>
+
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
   <div class="load-text" id="loadText">搜尋中…</div>
@@ -211,10 +216,17 @@
           </div>
           <div class="d-row"><span class="d-row-label">地址</span><span id="dAddr" class="d-row-val"></span></div>
           <div class="d-row"><span class="d-row-label">電話</span><span id="dPhone" class="d-row-val"></span></div>
-          <button class="maps-btn" id="dMapsBtn" onclick="openMaps()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            在地圖中查看
-          </button>
+          
+          <div class="action-row">
+            <button class="maps-btn" id="dMapsBtn" onclick="openMaps()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              導航
+            </button>
+            <button class="share-btn" onclick="sharePlace()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+              分享
+            </button>
+          </div>
         </div>
       </div>
     </div>
