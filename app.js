@@ -380,7 +380,7 @@ function showDetail(idx) {
   showPage('detailPage');
 }
 
-/* ── AI（Gemini 免費版）── */
+/* ── AI（Gemini，透過 Cloudflare Worker 中繼）── */
 const WORKER_URL = 'https://what2eat.evan34021.workers.dev';
 
 async function askAI() {
@@ -396,17 +396,14 @@ async function askAI() {
     const budgetCtx = budgetMax >= 1500 ? '不限預算' : `預算每人約 ${budgetMax} 元以內`;
     const prompt = `你是台灣美食推薦助理。${loc}${budgetCtx}。使用者說：「${inp}」\n\n請用繁體中文推薦2-3種適合的餐廳類型，每個一行，格式：【餐廳類型】理由（30字內）。`;
 
-    const r = await fetch(GEMINI_URL, {
+    const r = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 512, temperature: 0.7 }
-      })
+      body: JSON.stringify({ prompt })
     });
     const data = await r.json();
     if (data.error) {
-      res.innerHTML = `API 錯誤：${data.error.message}`;
+      res.innerHTML = `API 錯誤：${data.error.message || JSON.stringify(data.error)}`;
       return;
     }
     const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '無法取得建議';
