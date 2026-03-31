@@ -382,7 +382,7 @@ function showDetail(idx) {
 
 /* ── AI ── */
 // ↓ 部署 Cloudflare Worker 後，把網址貼在這裡
-const WORKER_URL = 'https://your-worker.your-name.workers.dev';
+const WORKER_URL = 'https://what2eat.evan34021.workers.dev';
 
 async function askAI() {
   const inp = document.getElementById('aiInput').value.trim();
