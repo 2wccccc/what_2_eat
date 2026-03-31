@@ -287,12 +287,23 @@ async function askAI() {
     await loadGMaps();
     aiPlacesService = createHiddenPlacesService(pg.lat, pg.lng);
     nearbyList = await new Promise(res => {
-      aiPlacesService.nearbySearch({
-        location: new google.maps.LatLng(pg.lat, pg.lng),
-        radius: getRadius(pg.transport), type: 'food'
-      }, (results, status) => {
-        res(status === google.maps.places.PlacesServiceStatus.OK ? results : []);
+      const searchTypes = ['restaurant', 'meal_takeaway'];
+      let combined = [], done = 0;
+      const seenIds = new Set();
+      searchTypes.forEach(type => {
+        aiPlacesService.nearbySearch({
+          location: new google.maps.LatLng(pg.lat, pg.lng),
+          radius: getRadius(pg.transport), type
+        }, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK) {
+            results.forEach(p => {
+              if (!seenIds.has(p.place_id)) { seenIds.add(p.place_id); combined.push(p); }
+            });
+          }
+          if (++done === searchTypes.length) res(combined);
+        });
       });
+    });
     });
   } catch(e) { /* 繼續，使用空清單 */ }
 
@@ -419,21 +430,39 @@ async function searchNearby() {
   try {
     await loadGMaps();
     placesService = createHiddenPlacesService(pg.lat, pg.lng);
-    placesService.nearbySearch({
-      location: new google.maps.LatLng(pg.lat, pg.lng),
-      radius: getRadius(pg.transport),
-      type: 'food' // 比 restaurant 更廣，涵蓋外帶店、小吃、便當等
-    }, (results, status) => {
-      hideLoading();
-      if (status === google.maps.places.PlacesServiceStatus.OK && results?.length) {
-        allRestaurants = results.map(p => formatPlace(p, pg.lat, pg.lng, pg.transport));
-        // 針對每間餐廳抓 weekday_text（批次，限前20間避免超配額）
-        fetchWeekdayTextBatch(allRestaurants.slice(0, 20), () => renderResults(allRestaurants));
-      } else {
-        showErr('searchErrBanner', 'Google Places 回應異常，改用示範資料');
-        allRestaurants = getMockData(pg);
-        renderResults(allRestaurants);
-      }
+    // 同時搜 restaurant + meal_takeaway，合併去重
+    const searchTypes = ['restaurant', 'meal_takeaway'];
+    let combined = [];
+    let done = 0;
+    const seenIds = new Set();
+
+    searchTypes.forEach(type => {
+      placesService.nearbySearch({
+        location: new google.maps.LatLng(pg.lat, pg.lng),
+        radius: getRadius(pg.transport),
+        type
+      }, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results?.length) {
+          results.forEach(p => {
+            if (!seenIds.has(p.place_id)) {
+              seenIds.add(p.place_id);
+              combined.push(p);
+            }
+          });
+        }
+        done++;
+        if (done === searchTypes.length) {
+          hideLoading();
+          if (combined.length) {
+            allRestaurants = combined.map(p => formatPlace(p, pg.lat, pg.lng, pg.transport));
+            fetchWeekdayTextBatch(allRestaurants.slice(0, 20), () => renderResults(allRestaurants));
+          } else {
+            showErr('searchErrBanner', 'Google Places 回應異常，改用示範資料');
+            allRestaurants = getMockData(pg);
+            renderResults(allRestaurants);
+          }
+        }
+      });
     });
   } catch(e) {
     hideLoading();
