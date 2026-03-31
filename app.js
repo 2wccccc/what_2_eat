@@ -289,7 +289,7 @@ async function askAI() {
     nearbyList = await new Promise(res => {
       aiPlacesService.nearbySearch({
         location: new google.maps.LatLng(pg.lat, pg.lng),
-        radius: getRadius(pg.transport), type: 'restaurant'
+        radius: getRadius(pg.transport), type: 'food'
       }, (results, status) => {
         res(status === google.maps.places.PlacesServiceStatus.OK ? results : []);
       });
@@ -421,7 +421,8 @@ async function searchNearby() {
     placesService = createHiddenPlacesService(pg.lat, pg.lng);
     placesService.nearbySearch({
       location: new google.maps.LatLng(pg.lat, pg.lng),
-      radius: getRadius(pg.transport), type: 'restaurant'
+      radius: getRadius(pg.transport),
+      type: 'food' // 比 restaurant 更廣，涵蓋外帶店、小吃、便當等
     }, (results, status) => {
       hideLoading();
       if (status === google.maps.places.PlacesServiceStatus.OK && results?.length) {
@@ -448,7 +449,6 @@ function fetchWeekdayTextBatch(list, callback) {
   if (!pending) { callback(); return; }
 
   list.forEach((r, i) => {
-    // 加小延遲避免 OVER_QUERY_LIMIT
     setTimeout(() => {
       if (!placesService || !r.placeId) { if (--pending === 0) callback(); return; }
       placesService.getDetails(
@@ -456,12 +456,13 @@ function fetchWeekdayTextBatch(list, callback) {
         (res, status) => {
           if (status === google.maps.places.PlacesServiceStatus.OK && res?.opening_hours) {
             r.weekdayText = res.opening_hours.weekday_text || null;
+            // 直接用 Google 的 isOpen() 作為權威來源，不自己解析
             r.isOpen = res.opening_hours.isOpen();
           }
           if (--pending === 0) callback();
         }
       );
-    }, i * 120); // 每間間隔120ms
+    }, i * 120);
   });
 }
 
@@ -471,9 +472,10 @@ function renderResults(list) {
   // 雙重篩選：預算 + 用餐時段
   const filtered = list.filter(r => {
     if (!budgetMatch(r.priceLevel, pg.budget)) return false;
-    // 時段判斷：若 weekdayText 有資料才篩選，否則保留（顯示為「時段未知」）
+    // 時段判斷：只用 isOpen（Google 權威）+ weekdayText 輔助顯示
+    // mealTimeMatch 僅用於「確定不在時段內」才篩掉，有疑慮一律保留
     const mealOk = mealTimeMatch(r.weekdayText, pg.meal);
-    return mealOk !== false; // null（無資料）也保留
+    return mealOk !== false;
   });
 
   // 動態三等分距離
