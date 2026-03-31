@@ -381,6 +381,9 @@ function showDetail(idx) {
 }
 
 /* ── AI ── */
+// ↓ 部署 Cloudflare Worker 後，把網址貼在這裡
+const WORKER_URL = 'https://what2eat.evan34021.workers.dev/';
+
 async function askAI() {
   const inp = document.getElementById('aiInput').value.trim();
   if (!inp) return;
@@ -392,12 +395,10 @@ async function askAI() {
       ? `使用者在台灣台中市附近（${userLat.toFixed(2)},${userLng.toFixed(2)}）。`
       : '使用者在台灣台中市。';
     const budgetCtx = budgetMax >= 1500 ? '不限預算' : `預算每人約 ${budgetMax} 元以內`;
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
+    const r = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
         messages: [{
           role: 'user',
           content: `你是台灣美食推薦助理。${loc}${budgetCtx}。使用者說：「${inp}」\n\n請用繁體中文推薦2-3種適合的餐廳類型，每個一行，格式：【餐廳類型】理由（30字內）。`
@@ -408,7 +409,7 @@ async function askAI() {
     const txt = data.content?.map(b => b.text || '').join('') || '無法取得建議';
     res.innerHTML = txt.replace(/\n/g, '<br>');
   } catch (e) {
-    res.innerHTML = '無法連線，請稍後再試。';
+    res.innerHTML = '無法連線，請確認 Worker 是否部署成功。';
   }
 }
 
