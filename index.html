@@ -9,11 +9,7 @@
 <body>
 
 <nav id="mainNav">
-  <div class="logo">吃<span>什麼</span>？</div>
-  <button class="btn-login" id="loginBtn" onclick="handleLogin()">
-    <div class="g-dot"></div>
-    <span id="loginText">Google 登入</span>
-  </button>
+  <div class="logo" onclick="showLanding()">吃<span>什麼</span>？</div>
 </nav>
 
 <div class="loading-overlay" id="loadingOverlay">
@@ -27,206 +23,227 @@
 </div>
 
 <!-- ══════════════════════════════
-     PAGE 1：AI 搜尋
+     LANDING
 ══════════════════════════════ -->
-<div class="page active" id="aiPage">
-  <div class="page-header">
-    <h1>AI 幫你找</h1>
-    <p>告訴我你想吃什麼，我幫你找附近的店</p>
+<div class="page active" id="landingPage">
+  <div class="landing-hero">
+    <span class="landing-emoji">🍜</span>
+    <div class="landing-title">今天要吃<span>什麼</span>？<br>讓我幫你決定</div>
+    <div class="landing-sub">根據你的位置、交通方式和心情，找到最適合的一餐。</div>
+    <button class="landing-cta" onclick="enterApp()">開始找餐廳</button>
   </div>
-
-  <div class="err-banner" id="aiErrBanner"></div>
-
-  <div class="filter-card">
-    <div class="filter-row">
-      <div class="filter-label">定位</div>
-      <button class="locate-btn" onclick="locateMe('ai')">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>
-        取得位置
-      </button>
-      <span class="locate-status" id="aiLocateStatus">尚未定位</span>
-    </div>
-    <div class="filter-row">
-      <div class="filter-label">交通方式</div>
-      <div class="chip-group" id="aiTransportGroup">
-        <button class="chip active" onclick="setChip(this,'aiTransportGroup','aiTransport')">步行</button>
-        <button class="chip"        onclick="setChip(this,'aiTransportGroup','aiTransport')">騎車</button>
-        <button class="chip"        onclick="setChip(this,'aiTransportGroup','aiTransport')">開車</button>
+  <div class="features">
+    <div class="features-title">三個核心功能</div>
+    <div class="feature-card">
+      <div class="feature-icon fi-purple">✨</div>
+      <div>
+        <div class="feature-name">AI 幫你選</div>
+        <div class="feature-desc">輸入心情或偏好，AI 從附近真實餐廳清單裡挑出最符合的店家，給出具體推薦。</div>
       </div>
     </div>
-    <div class="filter-row">
-      <div class="filter-label">時段</div>
-      <div class="chip-group" id="aiMealGroup">
-        <button class="chip active" onclick="setChip(this,'aiMealGroup','aiMeal')">早餐</button>
-        <button class="chip"        onclick="setChip(this,'aiMealGroup','aiMeal')">午餐</button>
-        <button class="chip"        onclick="setChip(this,'aiMealGroup','aiMeal')">晚餐</button>
-        <button class="chip"        onclick="setChip(this,'aiMealGroup','aiMeal')">消夜</button>
+    <div class="feature-card">
+      <div class="feature-icon fi-blue">🔍</div>
+      <div>
+        <div class="feature-name">依距離智慧分類</div>
+        <div class="feature-desc">根據步行、騎車或開車時間，將餐廳分成近、一般、遠三個區間，並標示是否營業。</div>
       </div>
     </div>
-    <div class="filter-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
-      <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
-        <div class="filter-label" style="min-width:unset;">預算上限</div>
-        <div style="display:flex;align-items:baseline;gap:3px;">
-          <span style="font-size:17px;font-weight:500;color:var(--md);" id="aiBudgetVal">300</span>
-          <span style="font-size:12px;color:var(--mm);">元／人</span>
-        </div>
-      </div>
-      <div style="width:100%;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:11px;color:var(--mg);">50</span>
-        <input type="range" id="aiBudgetSlider" min="50" max="1500" step="50" value="300" style="flex:1;" oninput="updateBudget('ai',this.value)"/>
-        <span style="font-size:11px;color:var(--mg);">1500+</span>
+    <div class="feature-card">
+      <div class="feature-icon fi-green">🗺️</div>
+      <div>
+        <div class="feature-name">地圖搜尋</div>
+        <div class="feature-desc">內嵌 Google Maps，直接搜尋店家位置，一鍵導航。</div>
       </div>
     </div>
   </div>
-
-  <div class="ai-input-card" style="margin-top:12px;">
-    <div class="ai-label"><div class="ai-pulse"></div>輸入你的需求</div>
-    <div class="ai-row">
-      <input class="ai-input" id="aiInput" placeholder="例：想吃便宜的日式料理、附近評分高的早餐…" onkeydown="if(event.key==='Enter')askAI()"/>
-      <button class="ai-send" onclick="askAI()">送出</button>
-    </div>
-  </div>
-
-  <div class="ai-result-box" id="aiResultBox">
-    <div class="ai-result-header" id="aiResultHeader">根據您的需求，在附近找到了幾個店家</div>
-    <div class="ai-result-body" id="aiResultBody"></div>
-  </div>
-
-  <div style="height:20px;"></div>
+  <div class="landing-footer">以 Google Places · Gemini AI 提供資料</div>
 </div>
 
 <!-- ══════════════════════════════
-     PAGE 2：一般搜尋
+     MAIN APP（含 Tab Bar）
 ══════════════════════════════ -->
-<div class="page" id="searchPage">
-  <div class="page-header">
-    <h1>一般搜尋</h1>
-    <p>搜尋附近餐廳，依距離分類顯示</p>
-  </div>
+<div id="appShell" style="display:none;">
 
-  <div class="err-banner" id="searchErrBanner"></div>
-
-  <div class="filter-card">
-    <div class="filter-row">
-      <div class="filter-label">定位</div>
-      <button class="locate-btn" onclick="locateMe('search')">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>
-        取得位置
-      </button>
-      <span class="locate-status" id="searchLocateStatus">尚未定位</span>
+  <!-- PAGE 1：AI 搜尋 -->
+  <div class="page active" id="aiPage">
+    <div class="page-header">
+      <h1>AI 幫你找</h1>
+      <p>告訴我你想吃什麼，我幫你找附近的店</p>
     </div>
-    <div class="filter-row">
-      <div class="filter-label">交通方式</div>
-      <div class="chip-group" id="searchTransportGroup">
-        <button class="chip active" onclick="setChip(this,'searchTransportGroup','searchTransport')">步行</button>
-        <button class="chip"        onclick="setChip(this,'searchTransportGroup','searchTransport')">騎車</button>
-        <button class="chip"        onclick="setChip(this,'searchTransportGroup','searchTransport')">開車</button>
+    <div class="err-banner" id="aiErrBanner"></div>
+    <div class="filter-card">
+      <div class="filter-row">
+        <div class="filter-label">定位</div>
+        <button class="locate-btn" onclick="locateMe('ai')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>
+          取得位置
+        </button>
+        <span class="locate-status" id="aiLocateStatus">尚未定位</span>
       </div>
-    </div>
-    <div class="filter-row">
-      <div class="filter-label">時段</div>
-      <div class="chip-group" id="searchMealGroup">
-        <button class="chip active" onclick="setChip(this,'searchMealGroup','searchMeal')">早餐</button>
-        <button class="chip"        onclick="setChip(this,'searchMealGroup','searchMeal')">午餐</button>
-        <button class="chip"        onclick="setChip(this,'searchMealGroup','searchMeal')">晚餐</button>
-        <button class="chip"        onclick="setChip(this,'searchMealGroup','searchMeal')">消夜</button>
-      </div>
-    </div>
-    <div class="filter-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
-      <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
-        <div class="filter-label" style="min-width:unset;">預算上限</div>
-        <div style="display:flex;align-items:baseline;gap:3px;">
-          <span style="font-size:17px;font-weight:500;color:var(--md);" id="searchBudgetVal">300</span>
-          <span style="font-size:12px;color:var(--mm);">元／人</span>
+      <div class="filter-row">
+        <div class="filter-label">交通方式</div>
+        <div class="chip-group" id="aiTransportGroup">
+          <button class="chip active" onclick="setChip(this,'aiTransportGroup','aiTransport')">步行</button>
+          <button class="chip"        onclick="setChip(this,'aiTransportGroup','aiTransport')">騎車</button>
+          <button class="chip"        onclick="setChip(this,'aiTransportGroup','aiTransport')">開車</button>
         </div>
       </div>
-      <div style="width:100%;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:11px;color:var(--mg);">50</span>
-        <input type="range" id="searchBudgetSlider" min="50" max="1500" step="50" value="300" style="flex:1;" oninput="updateBudget('search',this.value)"/>
-        <span style="font-size:11px;color:var(--mg);">1500+</span>
-      </div>
-    </div>
-  </div>
-
-  <button class="primary-btn" onclick="searchNearby()">搜尋餐廳</button>
-
-  <div id="searchResults" style="margin-top:8px;"></div>
-</div>
-
-<!-- ══════════════════════════════
-     PAGE 3：詳情（從搜尋進入）
-══════════════════════════════ -->
-<div class="page" id="detailPage">
-  <div class="back-row">
-    <div class="back-btn" onclick="showPage('searchPage')">← 返回</div>
-  </div>
-  <div class="detail-wrap">
-    <div class="detail-hero" id="dHero"></div>
-    <div class="detail-card">
-      <div class="d-header">
-        <div class="d-name" id="dName"></div>
-        <div class="d-meta">
-          <span id="dDist"></span>
-          <span id="dOpenBadge"></span>
+      <div class="filter-row">
+        <div class="filter-label">時段</div>
+        <div class="chip-group" id="aiMealGroup">
+          <button class="chip active" onclick="setChip(this,'aiMealGroup','aiMeal')">早餐</button>
+          <button class="chip"        onclick="setChip(this,'aiMealGroup','aiMeal')">午餐</button>
+          <button class="chip"        onclick="setChip(this,'aiMealGroup','aiMeal')">晚餐</button>
+          <button class="chip"        onclick="setChip(this,'aiMealGroup','aiMeal')">消夜</button>
         </div>
       </div>
-      <div class="d-body">
-        <div class="photo-strip" id="dPhotos"></div>
-
-        <!-- 評論統整 -->
-        <div class="d-sec">
-          <div class="d-sec-title">AI 評論摘要</div>
-          <div id="dReviewSummary" class="review-summary">
-            <div class="loading-dots"><div class="ld"></div><div class="ld"></div><div class="ld"></div></div>
+      <div class="filter-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+        <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+          <div class="filter-label" style="min-width:unset;">預算上限</div>
+          <div style="display:flex;align-items:baseline;gap:3px;">
+            <span style="font-size:17px;font-weight:500;color:var(--md);" id="aiBudgetVal">300</span>
+            <span style="font-size:12px;color:var(--mm);">元／人</span>
           </div>
         </div>
-
-        <div class="d-row"><span class="d-row-label">Google 評分</span><span id="dRating" class="d-row-val"></span></div>
-        <div class="d-row"><span class="d-row-label">評論數</span><span id="dReviews" class="d-row-val"></span></div>
-        <div class="d-row"><span class="d-row-label">價格範圍</span><span id="dPrice" class="d-row-val"></span></div>
-        <div class="d-row">
-          <span class="d-row-label">營業時間</span>
-          <div id="dHours" class="d-row-val hours-list"></div>
+        <div style="width:100%;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:11px;color:var(--mg);">50</span>
+          <input type="range" id="aiBudgetSlider" min="50" max="1500" step="50" value="300" style="flex:1;" oninput="updateBudget('ai',this.value)"/>
+          <span style="font-size:11px;color:var(--mg);">1500+</span>
         </div>
-        <div class="d-row"><span class="d-row-label">地址</span><span id="dAddr" class="d-row-val"></span></div>
-        <div class="d-row"><span class="d-row-label">電話</span><span id="dPhone" class="d-row-val"></span></div>
-        <a class="maps-btn" id="dMapsLink" href="#" target="_blank">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          在 Google Maps 查看
-        </a>
+      </div>
+    </div>
+    <div class="ai-input-card" style="margin-top:12px;">
+      <div class="ai-label"><div class="ai-pulse"></div>輸入你的需求</div>
+      <div class="ai-row">
+        <input class="ai-input" id="aiInput" placeholder="例：想吃便宜的日式料理、附近評分高的早餐…" onkeydown="if(event.key==='Enter')askAI()"/>
+        <button class="ai-send" onclick="askAI()">送出</button>
+      </div>
+    </div>
+    <div class="ai-result-box" id="aiResultBox">
+      <div class="ai-result-header" id="aiResultHeader"></div>
+      <div class="ai-result-body" id="aiResultBody"></div>
+    </div>
+    <div style="height:20px;"></div>
+  </div>
+
+  <!-- PAGE 2：一般搜尋 -->
+  <div class="page" id="searchPage">
+    <div class="page-header">
+      <h1>一般搜尋</h1>
+      <p>搜尋附近餐廳，依距離分類顯示</p>
+    </div>
+    <div class="err-banner" id="searchErrBanner"></div>
+    <div class="filter-card">
+      <div class="filter-row">
+        <div class="filter-label">定位</div>
+        <button class="locate-btn" onclick="locateMe('search')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>
+          取得位置
+        </button>
+        <span class="locate-status" id="searchLocateStatus">尚未定位</span>
+      </div>
+      <div class="filter-row">
+        <div class="filter-label">交通方式</div>
+        <div class="chip-group" id="searchTransportGroup">
+          <button class="chip active" onclick="setChip(this,'searchTransportGroup','searchTransport')">步行</button>
+          <button class="chip"        onclick="setChip(this,'searchTransportGroup','searchTransport')">騎車</button>
+          <button class="chip"        onclick="setChip(this,'searchTransportGroup','searchTransport')">開車</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-label">時段</div>
+        <div class="chip-group" id="searchMealGroup">
+          <button class="chip active" onclick="setChip(this,'searchMealGroup','searchMeal')">早餐</button>
+          <button class="chip"        onclick="setChip(this,'searchMealGroup','searchMeal')">午餐</button>
+          <button class="chip"        onclick="setChip(this,'searchMealGroup','searchMeal')">晚餐</button>
+          <button class="chip"        onclick="setChip(this,'searchMealGroup','searchMeal')">消夜</button>
+        </div>
+      </div>
+      <div class="filter-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+        <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+          <div class="filter-label" style="min-width:unset;">預算上限</div>
+          <div style="display:flex;align-items:baseline;gap:3px;">
+            <span style="font-size:17px;font-weight:500;color:var(--md);" id="searchBudgetVal">300</span>
+            <span style="font-size:12px;color:var(--mm);">元／人</span>
+          </div>
+        </div>
+        <div style="width:100%;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:11px;color:var(--mg);">50</span>
+          <input type="range" id="searchBudgetSlider" min="50" max="1500" step="50" value="300" style="flex:1;" oninput="updateBudget('search',this.value)"/>
+          <span style="font-size:11px;color:var(--mg);">1500+</span>
+        </div>
+      </div>
+    </div>
+    <button class="primary-btn" onclick="searchNearby()">搜尋餐廳</button>
+    <div id="searchResults" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- PAGE 3：詳情 -->
+  <div class="page" id="detailPage">
+    <div class="back-row">
+      <div class="back-btn" id="detailBackBtn" onclick="showPage('searchPage')">← 返回</div>
+    </div>
+    <div class="detail-wrap">
+      <div class="detail-hero" id="dHero"></div>
+      <div class="detail-card">
+        <div class="d-header">
+          <div class="d-name" id="dName"></div>
+          <div class="d-meta">
+            <span id="dDist"></span>
+            <span id="dOpenBadge"></span>
+          </div>
+        </div>
+        <div class="d-body">
+          <div class="photo-strip" id="dPhotos"></div>
+          <div class="d-sec">
+            <div class="d-sec-title">AI 評論摘要</div>
+            <div id="dReviewSummary" class="review-summary"></div>
+          </div>
+          <div class="d-row"><span class="d-row-label">Google 評分</span><span id="dRating" class="d-row-val"></span></div>
+          <div class="d-row"><span class="d-row-label">評論數</span><span id="dReviews" class="d-row-val"></span></div>
+          <div class="d-row"><span class="d-row-label">價格範圍</span><span id="dPrice" class="d-row-val"></span></div>
+          <div class="d-row">
+            <span class="d-row-label">營業時間</span>
+            <div id="dHours" class="d-row-val hours-list"></div>
+          </div>
+          <div class="d-row"><span class="d-row-label">地址</span><span id="dAddr" class="d-row-val"></span></div>
+          <div class="d-row"><span class="d-row-label">電話</span><span id="dPhone" class="d-row-val"></span></div>
+          <!-- 跨平台地圖按鈕 -->
+          <button class="maps-btn" id="dMapsBtn" onclick="openMaps()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            在地圖中查看
+          </button>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════
-     PAGE 4：地圖
-══════════════════════════════ -->
-<div class="page" id="mapPage">
-  <div class="map-search-bar">
-    <input class="map-search-input" id="mapSearchInput" placeholder="搜尋店家，例：春水堂 台中" onkeydown="if(event.key==='Enter')searchOnMap()"/>
-    <button class="map-search-btn" onclick="searchOnMap()">搜尋</button>
+  <!-- PAGE 4：地圖 -->
+  <div class="page" id="mapPage">
+    <div class="map-search-bar">
+      <input class="map-search-input" id="mapSearchInput" placeholder="搜尋店家，例：春水堂 台中" onkeydown="if(event.key==='Enter')searchOnMap()"/>
+      <button class="map-search-btn" onclick="searchOnMap()">搜尋</button>
+    </div>
+    <div id="googleMap"></div>
   </div>
-  <div id="googleMap"></div>
-</div>
 
-<!-- ══════════════════════════════
-     TAB BAR
-══════════════════════════════ -->
-<div class="tab-bar">
-  <button class="tab-item active" id="tab-ai" onclick="switchTab('ai')">
-    <span class="tab-icon">✨</span>
-    <span>AI 搜尋</span>
-  </button>
-  <button class="tab-item" id="tab-search" onclick="switchTab('search')">
-    <span class="tab-icon">🔍</span>
-    <span>一般搜尋</span>
-  </button>
-  <button class="tab-item" id="tab-map" onclick="switchTab('map')">
-    <span class="tab-icon">🗺️</span>
-    <span>地圖</span>
-  </button>
-</div>
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-item active" id="tab-ai" onclick="switchTab('ai')">
+      <span class="tab-icon">✨</span>
+      <span>AI 搜尋</span>
+    </button>
+    <button class="tab-item" id="tab-search" onclick="switchTab('search')">
+      <span class="tab-icon">🔍</span>
+      <span>一般搜尋</span>
+    </button>
+    <button class="tab-item" id="tab-map" onclick="switchTab('map')">
+      <span class="tab-icon">🗺️</span>
+      <span>地圖</span>
+    </button>
+  </div>
+
+</div><!-- end appShell -->
 
 <script src="app.js"></script>
 </body>
