@@ -380,9 +380,9 @@ function showDetail(idx) {
   showPage('detailPage');
 }
 
-/* ── AI ── */
-// ↓ 部署 Cloudflare Worker 後，把網址貼在這裡
-const WORKER_URL = 'https://what2eat.evan34021.workers.dev';
+/* ── AI（Gemini 免費版）── */
+const GEMINI_KEY = 'AIzaSyCamxBr6pOS0qvdcwNoXCG-fWd-4JwbMp0'; // ← 貼上你的 Gemini API Key
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
 
 async function askAI() {
   const inp = document.getElementById('aiInput').value.trim();
@@ -395,26 +395,24 @@ async function askAI() {
       ? `使用者在台灣台中市附近（${userLat.toFixed(2)},${userLng.toFixed(2)}）。`
       : '使用者在台灣台中市。';
     const budgetCtx = budgetMax >= 1500 ? '不限預算' : `預算每人約 ${budgetMax} 元以內`;
-    const r = await fetch(WORKER_URL, {
+    const prompt = `你是台灣美食推薦助理。${loc}${budgetCtx}。使用者說：「${inp}」\n\n請用繁體中文推薦2-3種適合的餐廳類型，每個一行，格式：【餐廳類型】理由（30字內）。`;
+
+    const r = await fetch(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: [{
-          role: 'user',
-          content: `你是台灣美食推薦助理。${loc}${budgetCtx}。使用者說：「${inp}」\n\n請用繁體中文推薦2-3種適合的餐廳類型，每個一行，格式：【餐廳類型】理由（30字內）。`
-        }]
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 512, temperature: 0.7 }
       })
     });
     const data = await r.json();
-    console.log('Worker response:', JSON.stringify(data)); // 除錯用
     if (data.error) {
-      res.innerHTML = `API 錯誤：${data.error.message || JSON.stringify(data.error)}`;
+      res.innerHTML = `API 錯誤：${data.error.message}`;
       return;
     }
-    const txt = data.content?.map(b => b.text || '').join('') || '無法取得建議';
+    const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '無法取得建議';
     res.innerHTML = txt.replace(/\n/g, '<br>');
   } catch (e) {
-    console.error('fetch error:', e);
     res.innerHTML = `連線失敗：${e.message}`;
   }
 }
