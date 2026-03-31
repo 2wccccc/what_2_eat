@@ -382,7 +382,7 @@ function showDetail(idx) {
 
 /* ── AI ── */
 // ↓ 部署 Cloudflare Worker 後，把網址貼在這裡
-const WORKER_URL = 'https://what2eat.evan34021.workers.dev/';
+const WORKER_URL = 'https://your-worker.your-name.workers.dev';
 
 async function askAI() {
   const inp = document.getElementById('aiInput').value.trim();
@@ -406,10 +406,16 @@ async function askAI() {
       })
     });
     const data = await r.json();
+    console.log('Worker response:', JSON.stringify(data)); // 除錯用
+    if (data.error) {
+      res.innerHTML = `API 錯誤：${data.error.message || JSON.stringify(data.error)}`;
+      return;
+    }
     const txt = data.content?.map(b => b.text || '').join('') || '無法取得建議';
     res.innerHTML = txt.replace(/\n/g, '<br>');
   } catch (e) {
-    res.innerHTML = '無法連線，請確認 Worker 是否部署成功。';
+    console.error('fetch error:', e);
+    res.innerHTML = `連線失敗：${e.message}`;
   }
 }
 
