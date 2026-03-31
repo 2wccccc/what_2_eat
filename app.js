@@ -382,7 +382,7 @@ function showDetail(idx) {
 
 /* ── AI（Gemini 免費版）── */
 const GEMINI_KEY = 'AIzaSyCamxBr6pOS0qvdcwNoXCG-fWd-4JwbMp0'; // ← 貼上你的 Gemini API Key
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_KEY}`;
 
 async function askAI() {
   const inp = document.getElementById('aiInput').value.trim();
