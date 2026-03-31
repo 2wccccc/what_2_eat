@@ -20,10 +20,8 @@ let mapInstance     = null;
 let mapsLoaded      = false;
 let currentWeatherCtx = '';
 
-// 目前在 detail 的店家資料（供 openMaps 使用）
 let currentDetailPlace = null;
 
-// 初始化時讀取 LocalStorage
 document.addEventListener('DOMContentLoaded', () => {
   const savedPref = localStorage.getItem('what2eat_pref') || '想減內臟脂肪，盡量推薦健康、高蛋白或低碳水的餐點'; 
   const prefInput = document.getElementById('userPref');
@@ -35,7 +33,6 @@ function savePref(val) {
   showToast('偏好已儲存');
 }
 
-// 取得天氣資訊的函式 (Open-Meteo)
 async function fetchWeather(lat, lng) {
   try {
     const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
@@ -51,7 +48,7 @@ async function fetchWeather(lat, lng) {
 }
 
 /* ══════════════════════════════════════
-   Landing / App shell
+   UI Helpers & 骨架屏 Skeleton
 ══════════════════════════════════════ */
 function showLanding() {
   document.getElementById('appShell').style.display = 'none';
@@ -67,9 +64,6 @@ function enterApp() {
   locateMe('search');
 }
 
-/* ══════════════════════════════════════
-   Tab / Page
-══════════════════════════════════════ */
 function switchTab(tab) {
   const pageMap = { ai: 'aiPage', search: 'searchPage', map: 'mapPage' };
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -88,29 +82,39 @@ window.addEventListener('scroll', () => {
   document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 8);
 });
 
-/* ══════════════════════════════════════
-   UI helpers
-══════════════════════════════════════ */
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
 }
+
 function showErr(bannerId, msg) {
   const b = document.getElementById(bannerId);
   b.textContent = msg; b.classList.add('show');
   setTimeout(() => b.classList.remove('show'), 6000);
 }
-function showLoading(txt) {
-  document.getElementById('loadText').textContent = txt || '搜尋中…';
-  document.getElementById('loadingOverlay').classList.add('show');
-}
-function hideLoading() {
-  document.getElementById('loadingOverlay').classList.remove('show');
+
+// 🌟 新增：繪製骨架屏
+function showSkeleton(containerId) {
+  const el = document.getElementById(containerId);
+  let html = '<div style="padding: 16px 16px 0;">';
+  for(let i=0; i<4; i++) {
+    html += `
+      <div class="skeleton-card">
+        <div class="sk-thumb sk-anim"></div>
+        <div style="flex:1;">
+          <div class="sk-line sk-anim w-70"></div>
+          <div class="sk-line sk-anim w-40"></div>
+          <div class="sk-line sk-anim w-40" style="margin-top:16px"></div>
+        </div>
+      </div>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 /* ══════════════════════════════════════
-   Filters
+   Filters & Locate
 ══════════════════════════════════════ */
 function setChip(el, groupId, stateKey) {
   document.getElementById(groupId).querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
@@ -132,9 +136,6 @@ function budgetMatch(priceLevel, budget) {
   return (map[priceLevel ?? 1] ?? 150) <= budget;
 }
 
-/* ══════════════════════════════════════
-   Locate
-══════════════════════════════════════ */
 function locateMe(page) {
   const s = document.getElementById(`${page}LocateStatus`);
   s.textContent = '定位中…'; s.className = 'locate-status';
@@ -155,7 +156,7 @@ function locateMe(page) {
 }
 
 /* ══════════════════════════════════════
-   Google Maps Loader
+   Google Maps Loader & Platform Navigation
 ══════════════════════════════════════ */
 function loadGMaps() {
   return new Promise((res, rej) => {
@@ -184,9 +185,6 @@ function createHiddenMap(lat, lng) {
   return new google.maps.Map(div, { center: { lat, lng }, zoom: 15 });
 }
 
-/* ══════════════════════════════════════
-   Map Page
-══════════════════════════════════════ */
 async function initMap() {
   if (mapInstance) return;
   try {
@@ -198,6 +196,7 @@ async function initMap() {
     });
   } catch(e) { console.error('Map init failed', e); }
 }
+
 function searchOnMap() {
   const q = document.getElementById('mapSearchInput').value.trim();
   if (!q || !mapInstance) return;
@@ -216,7 +215,6 @@ function openMaps() {
   const { name, lat, lng, placeId } = currentDetailPlace;
   const isIOS     = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
-
   if (isIOS) {
     window.location.href = `maps://?q=${encodeURIComponent(name)}&ll=${lat},${lng}`;
   } else if (isAndroid) {
@@ -224,8 +222,33 @@ function openMaps() {
   } else {
     const url = placeId
       ? `https://www.google.com/maps/place/?q=place_id:${placeId}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+      : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
     window.open(url, '_blank');
+  }
+}
+
+// 🌟 新增：一鍵分享給朋友 (Web Share API)
+async function sharePlace() {
+  if (!currentDetailPlace) return;
+  const { name, rating, address, placeId, lat, lng } = currentDetailPlace;
+  const stars = rating ? `評分: ${rating}⭐` : '';
+  const url = placeId
+    ? `https://www.google.com/maps/place/?q=place_id:${placeId}`
+    : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+  const shareData = {
+    title: `今晚吃這個！${name}`,
+    text: `推薦一間不錯的店「${name}」\n${stars}\n${address ? '地址: '+address : ''}\n`,
+    url: url
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (err) { console.log('分享取消或失敗', err); }
+  } else {
+    navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+    showToast('已複製分享連結！');
   }
 }
 
@@ -335,7 +358,7 @@ function fallbackMins(r, pg) {
 }
 
 /* ══════════════════════════════════════
-   AI SEARCH (加上天氣和偏好記憶)
+   AI SEARCH
 ══════════════════════════════════════ */
 async function askAI() {
   const inp = document.getElementById('aiInput').value.trim();
@@ -348,7 +371,9 @@ async function askAI() {
   const header = document.getElementById('aiResultHeader');
   box.classList.add('show');
   header.textContent = '搜尋附近餐廳中…';
-  body.innerHTML = '<div class="loading-dots"><div class="ld"></div><div class="ld"></div><div class="ld"></div></div>';
+  
+  // 🌟 使用骨架屏取代舊的 Loading
+  showSkeleton('aiResultBody');
 
   try {
     const [_, raw] = await Promise.all([
@@ -364,7 +389,6 @@ async function askAI() {
     aiRestaurants = raw.map(p => formatPlace(p));
   } catch(e) { aiRestaurants = []; }
 
-  // 交通時間
   if (aiRestaurants.length && distMatrixSvc) {
     header.textContent = '計算距離中…';
     const times = await fetchTravelTimes(
@@ -379,10 +403,8 @@ async function askAI() {
     aiRestaurants.forEach(r => fallbackMins(r, pg));
   }
 
-  // 🌟 修正：依照距離先排序，再抓營業狀態
   aiRestaurants.sort((a, b) => (a.mins || 0) - (b.mins || 0));
 
-  // 取得營業狀態
   header.textContent = '確認營業狀態…';
   await fetchOpenStatusBatch(aiRestaurants.slice(0, 15), aiPlacesService);
 
@@ -405,7 +427,7 @@ async function askAI() {
     `從清單中嚴選最符合上述所有條件的 3-5 間（優先選「營業中」的），只輸出 JSON（不要其他文字）：\n` +
     `[{"name":"店名","mins":分鐘數,"rating":評分,"priceLevel":0-4,"isOpen":true/false/null,"desc":"20字內介紹為何推薦這家(需結合天氣或偏好)"}]`;
 
-  header.textContent = 'AI 分析中…';
+  header.textContent = 'AI 認真思考中…';
   try {
     const resp = await fetch(WORKER_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -431,7 +453,7 @@ async function askAI() {
       };
     });
 
-    header.textContent = `根據您的需求，在附近找到了 ${matched.length} 個店家`;
+    header.textContent = `根據您的需求，在附近找到了 ${matched.length} 個選項`;
     body.innerHTML = '';
     renderAIGroup(body, matched.filter(r => (r.mins||0) <= 10),              '🟢 近（10 分鐘內）',     'near');
     renderAIGroup(body, matched.filter(r => (r.mins||0) > 10 && (r.mins||0) <= 20), '🔵 一般（10–20 分鐘）', 'mid');
@@ -484,7 +506,9 @@ async function searchNearby() {
   const pg = state.search;
   if (!pg.lat) { pg.lat = 24.1477; pg.lng = 120.6736; }
 
-  showLoading('正在搜尋附近餐廳…');
+  // 🌟 使用骨架屏取代舊的 Overlay
+  showSkeleton('searchResults');
+
   try {
     await loadGMaps();
     const map     = createHiddenMap(pg.lat, pg.lng);
@@ -495,13 +519,11 @@ async function searchNearby() {
       placesService, new google.maps.LatLng(pg.lat, pg.lng), getRadius(pg.transport)
     );
     if (!combined.length) {
-      hideLoading();
       showErr('searchErrBanner', '找不到附近餐廳，使用示範資料');
       allRestaurants = getMockData(pg); renderResults(allRestaurants); return;
     }
     allRestaurants = combined.map(p => formatPlace(p));
 
-    document.getElementById('loadText').textContent = '計算交通時間…';
     const times = await fetchTravelTimes(
       [new google.maps.LatLng(pg.lat, pg.lng)],
       allRestaurants.map(r => new google.maps.LatLng(r.lat, r.lng)),
@@ -511,24 +533,19 @@ async function searchNearby() {
       if (times[i] != null) r.mins = times[i]; else fallbackMins(r, pg);
     });
 
-    // 🌟 修正：依照距離先排序，確保前 20 家是最靠近的
     allRestaurants.sort((a, b) => (a.mins || 0) - (b.mins || 0));
 
-    document.getElementById('loadText').textContent = '確認營業狀態…';
     await fetchOpenStatusBatch(allRestaurants.slice(0, 20), placesService);
-
-    hideLoading();
     renderResults(allRestaurants);
 
   } catch(e) {
-    hideLoading();
     showErr('searchErrBanner', 'Google Maps 載入失敗，使用示範資料');
     allRestaurants = getMockData(pg);
     renderResults(allRestaurants);
   }
 }
 
-// 新增：隨機決定一間餐廳
+// 🌟 新增：帶有儀式感的骰子過場動畫
 function pickRandom() {
   if (!allRestaurants || allRestaurants.length === 0) {
     showToast('請先點擊「搜尋餐廳」載入附近店家！');
@@ -536,19 +553,38 @@ function pickRandom() {
   }
   let pool = allRestaurants.filter(r => r.isOpen === true);
   if (pool.length === 0) pool = allRestaurants;
-  const randomPlace = pool[Math.floor(Math.random() * pool.length)];
-  const originalIdx = allRestaurants.indexOf(randomPlace);
-  showToast('🎲 命運的安排是...');
-  setTimeout(() => {
-    showDetail(originalIdx);
-  }, 600);
+
+  const overlay = document.getElementById('diceOverlay');
+  const textEl  = document.getElementById('diceText');
+  overlay.classList.add('show');
+  
+  let count = 0;
+  // 吃角子老虎機般的文字閃爍動畫
+  const interval = setInterval(() => {
+    const tempPlace = pool[Math.floor(Math.random() * pool.length)];
+    textEl.textContent = tempPlace.name;
+    count++;
+    
+    // 轉了大概 15 次之後停下來
+    if (count > 15) {
+      clearInterval(interval);
+      const finalPlace = pool[Math.floor(Math.random() * pool.length)];
+      textEl.innerHTML = `<span style="font-size:16px;color:var(--mm);">這餐就吃...</span><br><br><span style="color:var(--mb);font-size:26px;">${finalPlace.name}</span>`;
+      const originalIdx = allRestaurants.indexOf(finalPlace);
+
+      // 停頓 1.2 秒讓使用者看清楚抽中什麼，再切換畫面
+      setTimeout(() => {
+        overlay.classList.remove('show');
+        showDetail(originalIdx);
+      }, 1200);
+    }
+  }, 80);
 }
 
 function renderResults(list) {
   const pg       = state.search;
   const filtered = list.filter(r => budgetMatch(r.priceLevel, pg.budget));
   
-  // 🌟 修正：確保渲染群組時也是使用排序後的陣列
   const sorted   = [...filtered].sort((a,b) => (a.mins||0) - (b.mins||0));
   const t1 = sorted[Math.floor(sorted.length/3)]?.mins   || 10;
   const t2 = sorted[Math.floor(sorted.length*2/3)]?.mins || 20;
@@ -563,7 +599,6 @@ function renderResults(list) {
 
   document.getElementById('detailBackBtn').setAttribute('onclick', "showPage('searchPage')");
   
-  // 🌟 修正：使用 sorted 陣列來切分顯示群組
   renderGroup(el, sorted.filter(r => (r.mins||0) <= t1),                         `🟢 近（${t1} 分鐘內）`,        'near');
   renderGroup(el, sorted.filter(r => (r.mins||0) > t1 && (r.mins||0) <= t2),     `🔵 一般（${t1}–${t2} 分鐘）`, 'mid');
   renderGroup(el, sorted.filter(r => (r.mins||0) > t2),                          `🟣 遠（${t2} 分鐘以上）`,      'far');
@@ -571,16 +606,24 @@ function renderResults(list) {
 
 function renderGroup(container, list, label, bc) {
   const sec = document.createElement('div');
+  // 🌟 有趣的空狀態設計 (Empty State)
   if (!list.length) {
-    sec.innerHTML = `<div class="sec-label">${label} <span class="sec-count">0</span></div>
-      <div class="empty-group">此區間目前沒有符合條件的餐廳</div>`;
+    sec.innerHTML = `
+      <div class="sec-label">${label} <span class="sec-count">0</span></div>
+      <div class="empty-group">
+        <div class="empty-emoji">🏜️</div>
+        <div class="empty-title">美食沙漠？</div>
+        <div>此區間沒有符合條件的餐廳<br>試著擴大預算或換個交通方式吧</div>
+      </div>`;
     container.appendChild(sec); return;
   }
+  
   const cards = list.slice(0, 12).map((r, i) => {
     const ri    = allRestaurants.indexOf(r);
     const emoji = typeEmoji(r.types);
+    // 🌟 圖片加入 lazy-fade 漸進載入動畫
     const thumb = r.photos[0]
-      ? `<img class="r-thumb" src="${r.photos[0]}" alt="" onerror="this.outerHTML='<div class=\\'r-thumb-placeholder\\'>${emoji}</div>'">`
+      ? `<img class="r-thumb lazy-fade" src="${r.photos[0]}" loading="lazy" alt="" onerror="this.outerHTML='<div class=\\'r-thumb-placeholder\\'>${emoji}</div>'">`
       : `<div class="r-thumb-placeholder">${emoji}</div>`;
     const openTag = r.isOpen === true  ? '<span class="r-tag open">營業中</span>'
                   : r.isOpen === false ? '<span class="r-tag closed">未營業</span>'
@@ -612,8 +655,9 @@ function showDetail(idx) {
   currentDetailPlace = r;
 
   const hero = document.getElementById('dHero');
+  // 🌟 Hero 圖片也加入 lazy-fade 漸進載入動畫
   hero.innerHTML = r.photos[0]
-    ? `<img class="detail-hero-img" src="${r.photos[0]}" alt="" onerror="this.outerHTML='<div class=\\'detail-hero-placeholder\\'>${emoji}</div>'">`
+    ? `<img class="detail-hero-img lazy-fade" src="${r.photos[0]}" loading="lazy" alt="" onerror="this.outerHTML='<div class=\\'detail-hero-placeholder\\'>${emoji}</div>'">`
     : `<div class="detail-hero-placeholder">${emoji}</div>`;
 
   document.getElementById('dName').textContent    = r.name;
@@ -639,7 +683,8 @@ function showDetail(idx) {
   const ph = document.getElementById('dPhotos');
   const renderPhotos = photos => {
     ph.innerHTML = photos.length
-      ? photos.map(u => `<img src="${u}" alt="" onclick="openLightbox('${u}')" onerror="this.outerHTML='<div class=\\'photo-ph\\'>${emoji}<span>暫無</span></div>'">`).join('')
+      // 🌟 照片牆也加入 lazy-fade 漸進載入動畫
+      ? photos.map(u => `<img class="lazy-fade" src="${u}" loading="lazy" alt="" onclick="openLightbox('${u}')" onerror="this.outerHTML='<div class=\\'photo-ph\\'>${emoji}<span>暫無</span></div>'">`).join('')
         + (photos.length < 3 ? Array(3-photos.length).fill(`<div class="photo-ph">${emoji}</div>`).join('') : '')
       : Array(3).fill(`<div class="photo-ph">${emoji}</div>`).join('');
   };
@@ -677,7 +722,7 @@ function showDetail(idx) {
           newPhotos.push(res.photos[i].getUrl({ maxWidth: 500 }));
         r.photos = newPhotos;
         renderPhotos(newPhotos);
-        hero.innerHTML = `<img class="detail-hero-img" src="${newPhotos[0]}" alt="" onerror="this.outerHTML='<div class=\\'detail-hero-placeholder\\'>${emoji}</div>'">`;
+        hero.innerHTML = `<img class="detail-hero-img lazy-fade" src="${newPhotos[0]}" loading="lazy" alt="" onerror="this.outerHTML='<div class=\\'detail-hero-placeholder\\'>${emoji}</div>'">`;
       }
       fetchReviewSummary(r);
     });
