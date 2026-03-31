@@ -22,9 +22,6 @@
   <img id="lightboxImg" src="" alt="">
 </div>
 
-<!-- ══════════════════════════════
-     LANDING
-══════════════════════════════ -->
 <div class="page active" id="landingPage">
   <div class="landing-hero">
     <span class="landing-emoji">🍜</span>
@@ -59,12 +56,8 @@
   <div class="landing-footer">以 Google Places · Gemini AI 提供資料</div>
 </div>
 
-<!-- ══════════════════════════════
-     MAIN APP（含 Tab Bar）
-══════════════════════════════ -->
 <div id="appShell" style="display:none;">
 
-  <!-- PAGE 1：AI 搜尋 -->
   <div class="page active" id="aiPage">
     <div class="page-header">
       <h1>AI 幫你找</h1>
@@ -111,7 +104,12 @@
           <span style="font-size:11px;color:var(--mg);">1500+</span>
         </div>
       </div>
+      <div class="filter-row" style="margin-top: 12px; border-top: 0.5px solid var(--mg-l); padding-top: 12px;">
+        <div class="filter-label" style="min-width:60px;">飲食偏好</div>
+        <input type="text" id="userPref" class="ai-input" style="padding: 6px 12px; font-size: 13px; border-radius: 8px;" placeholder="例：無辣不歡、不想吃麵..." onblur="savePref(this.value)">
+      </div>
     </div>
+    
     <div class="ai-input-card" style="margin-top:12px;">
       <div class="ai-label"><div class="ai-pulse"></div>輸入你的需求</div>
       <div class="ai-row">
@@ -126,7 +124,6 @@
     <div style="height:20px;"></div>
   </div>
 
-  <!-- PAGE 2：一般搜尋 -->
   <div class="page" id="searchPage">
     <div class="page-header">
       <h1>一般搜尋</h1>
@@ -174,11 +171,17 @@
         </div>
       </div>
     </div>
-    <button class="primary-btn" onclick="searchNearby()">搜尋餐廳</button>
+    
+    <div style="display: flex; gap: 12px; margin: 14px 16px 0;">
+      <button class="primary-btn" style="margin: 0; flex: 1;" onclick="searchNearby()">搜尋餐廳</button>
+      <button class="primary-btn" style="margin: 0; background: var(--mw); color: var(--mt); border: 0.5px solid var(--bd); width: auto; padding: 12px 18px;" onclick="pickRandom()" title="隨機決定">
+        🎲
+      </button>
+    </div>
+
     <div id="searchResults" style="margin-top:8px;"></div>
   </div>
 
-  <!-- PAGE 3：詳情 -->
   <div class="page" id="detailPage">
     <div class="back-row">
       <div class="back-btn" id="detailBackBtn" onclick="showPage('searchPage')">← 返回</div>
@@ -208,7 +211,6 @@
           </div>
           <div class="d-row"><span class="d-row-label">地址</span><span id="dAddr" class="d-row-val"></span></div>
           <div class="d-row"><span class="d-row-label">電話</span><span id="dPhone" class="d-row-val"></span></div>
-          <!-- 跨平台地圖按鈕 -->
           <button class="maps-btn" id="dMapsBtn" onclick="openMaps()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             在地圖中查看
@@ -218,7 +220,6 @@
     </div>
   </div>
 
-  <!-- PAGE 4：地圖 -->
   <div class="page" id="mapPage">
     <div class="map-search-bar">
       <input class="map-search-input" id="mapSearchInput" placeholder="搜尋店家，例：春水堂 台中" onkeydown="if(event.key==='Enter')searchOnMap()"/>
@@ -227,7 +228,6 @@
     <div id="googleMap"></div>
   </div>
 
-  <!-- TAB BAR -->
   <div class="tab-bar">
     <button class="tab-item active" id="tab-ai" onclick="switchTab('ai')">
       <span class="tab-icon">✨</span>
@@ -243,8 +243,6 @@
     </button>
   </div>
 
-</div><!-- end appShell -->
-
-<script src="app.js"></script>
+</div><script src="app.js"></script>
 </body>
 </html>
