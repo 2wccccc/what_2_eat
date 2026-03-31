@@ -379,6 +379,9 @@ async function askAI() {
     aiRestaurants.forEach(r => fallbackMins(r, pg));
   }
 
+  // 🌟 修正：依照距離先排序，再抓營業狀態
+  aiRestaurants.sort((a, b) => (a.mins || 0) - (b.mins || 0));
+
   // 取得營業狀態
   header.textContent = '確認營業狀態…';
   await fetchOpenStatusBatch(aiRestaurants.slice(0, 15), aiPlacesService);
@@ -508,6 +511,9 @@ async function searchNearby() {
       if (times[i] != null) r.mins = times[i]; else fallbackMins(r, pg);
     });
 
+    // 🌟 修正：依照距離先排序，確保前 20 家是最靠近的
+    allRestaurants.sort((a, b) => (a.mins || 0) - (b.mins || 0));
+
     document.getElementById('loadText').textContent = '確認營業狀態…';
     await fetchOpenStatusBatch(allRestaurants.slice(0, 20), placesService);
 
@@ -541,6 +547,8 @@ function pickRandom() {
 function renderResults(list) {
   const pg       = state.search;
   const filtered = list.filter(r => budgetMatch(r.priceLevel, pg.budget));
+  
+  // 🌟 修正：確保渲染群組時也是使用排序後的陣列
   const sorted   = [...filtered].sort((a,b) => (a.mins||0) - (b.mins||0));
   const t1 = sorted[Math.floor(sorted.length/3)]?.mins   || 10;
   const t2 = sorted[Math.floor(sorted.length*2/3)]?.mins || 20;
@@ -554,9 +562,11 @@ function renderResults(list) {
   el.appendChild(sum);
 
   document.getElementById('detailBackBtn').setAttribute('onclick', "showPage('searchPage')");
-  renderGroup(el, filtered.filter(r => (r.mins||0) <= t1),                         `🟢 近（${t1} 分鐘內）`,        'near');
-  renderGroup(el, filtered.filter(r => (r.mins||0) > t1 && (r.mins||0) <= t2),     `🔵 一般（${t1}–${t2} 分鐘）`, 'mid');
-  renderGroup(el, filtered.filter(r => (r.mins||0) > t2),                          `🟣 遠（${t2} 分鐘以上）`,      'far');
+  
+  // 🌟 修正：使用 sorted 陣列來切分顯示群組
+  renderGroup(el, sorted.filter(r => (r.mins||0) <= t1),                         `🟢 近（${t1} 分鐘內）`,        'near');
+  renderGroup(el, sorted.filter(r => (r.mins||0) > t1 && (r.mins||0) <= t2),     `🔵 一般（${t1}–${t2} 分鐘）`, 'mid');
+  renderGroup(el, sorted.filter(r => (r.mins||0) > t2),                          `🟣 遠（${t2} 分鐘以上）`,      'far');
 }
 
 function renderGroup(container, list, label, bc) {
