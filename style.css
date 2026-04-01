@@ -138,7 +138,7 @@ nav {
 .page.active { display: block; animation: pageIn 0.3s ease-out; }
 @keyframes pageIn { from{opacity:0;transform:translateY(15px)} to{opacity:1;transform:translateY(0)} }
 
-/* 🌟 地圖修正：保證佔滿螢幕 */
+/* 🌟 地圖修正 */
 #mapPage { height: calc(100vh - 52px - var(--tab-h)); display: none; flex-direction: column; }
 #mapPage.active { display: flex; }
 #googleMap { flex: 1; width: 100%; }
@@ -252,7 +252,7 @@ input[type=range]::-webkit-slider-thumb {
 .r-body { flex: 1; padding: 12px 14px; min-width: 0; }
 .r-name { font-size: 15px; font-weight: bold; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--mt); }
 .r-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
-.r-tag { font-size: 11px; background: white; color: var(--mm); border: 1px solid var(--mg-l); border-radius: 4px; padding: 2px 6px; }
+.r-tag { font-size: 11px; background: white; color: var(--mm); border: 1px solid var(--mg-l); border-radius: 4px; padding: 2px 6px; transition: color 0.3s, border-color 0.3s; }
 .r-tag.open { border-color: var(--green); color: var(--green); background: rgba(16, 185, 129, 0.05); }
 .r-tag.closed { border-color: var(--red); color: var(--red); }
 .r-footer { display: flex; justify-content: space-between; align-items: center; }
@@ -262,7 +262,7 @@ input[type=range]::-webkit-slider-thumb {
 .b-far  { border-color: var(--mm); color: var(--mm); }
 
 /* ══════════════════════
-   DETAIL PAGE (🌟 這裡已完美修復並套用科技風！)
+   DETAIL PAGE (🌟 這裡已完美修復！)
 ══════════════════════ */
 .back-row { padding: 14px 18px 8px; display: flex; align-items: center; gap: 8px; }
 .back-btn { cursor: pointer; color: var(--mm); font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 4px; transition: color var(--trans), transform var(--trans); }
@@ -330,7 +330,7 @@ input[type=range]::-webkit-slider-thumb {
 .locate-btn { background: white; border: 1px solid var(--bd); color: var(--mt); border-radius: 6px; padding: 5px 12px;}
 .locate-btn:hover { border-color: var(--mb); color: var(--mb); background: var(--mb-p); }
 
-/* 🌟 修復核心：骰子動畫層與 Lightbox (確保滿版固定與隱藏層級正確) */
+/* 🌟 修復核心：骰子動畫層與 Lightbox */
 .dice-overlay { 
   position: fixed; inset: 0; 
   background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
