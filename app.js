@@ -505,14 +505,19 @@ async function askAI() {
     const userPref = localStorage.getItem('what2eat_pref') || document.getElementById('userPref').value;
     const prefCtx = userPref ? `使用者長期飲食偏好：「${userPref}」，請在推薦時將此條件納入考量。\n` : '';
 
+    // 🌟 強化提示詞層級：強制 AI 將「當下需求」視為絕對第一優先
     const prompt =
-      `你是台灣美食推薦助理。使用者目前在台中市附近。\n` +
-      `交通：${pg.transport}，時段：${pg.meal}，預算上限：${pg.budget >= 1500 ? '不限' : pg.budget + '元'}。\n` +
-      `${currentWeatherCtx}\n${prefCtx}\n` +
-      `當下具體需求：「${inp}」\n\n附近真實餐廳清單：\n${listCtx}\n\n` +
-      `從清單中嚴選最符合上述所有條件的 3-5 間（優先選「營業中」的），只輸出 JSON（不要其他文字）：\n` +
-      `[{"name":"店名","mins":分鐘數,"rating":評分,"priceLevel":0-4,"isOpen":true/false/null,"desc":"20字內介紹為何推薦這家(需結合天氣或偏好)"}]`;
-
+      `你是專業的美食推薦 AI。請以【當下具體需求】為「最優先絕對標準」！\n\n` +
+      `🎯 【當下具體需求】：「${inp}」 (請務必嚴格遵循此條件進行篩選)\n\n` +
+      `📝 【其他狀態與偏好】（在符合上述需求的前提下作為加分條件）：\n` +
+      `- 交通：${pg.transport}，時段：${pg.meal}，預算上限：${pg.budget >= 1500 ? '不限' : pg.budget + '元'}\n` +
+      `- ${currentWeatherCtx || '目前天氣穩定'}\n` +
+      `- 長期偏好：${userPref ? `「${userPref}」` : '無特別偏好'}\n\n` +
+      `📍 【附近真實餐廳清單】：\n${listCtx}\n\n` +
+      `請從清單中找出最完美符合「當下具體需求」的 3-5 間店（優先選「營業中」的）。\n` +
+      `請務必只輸出 JSON 格式（絕對不要輸出任何 markdown 標記或額外對話）：\n` +
+      `[{"name":"店名","mins":分鐘數,"rating":評分,"priceLevel":0-4,"isOpen":true/false/null,"desc":"20字內精準說明這家店為何完美符合使用者的『當下具體需求』"}]`;
+    
     header.textContent = 'AI 認真思考中…';
     const resp = await fetch(WORKER_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
