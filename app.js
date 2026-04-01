@@ -22,6 +22,10 @@ let currentWeatherCtx = '';
 
 let currentDetailPlace = null;
 
+// 🌟 暴躁模式計數器
+let diceClickCount = 0;
+let lastDiceTime = 0;
+
 document.addEventListener('DOMContentLoaded', () => {
   const savedPref = localStorage.getItem('what2eat_pref') || '想減內臟脂肪，盡量推薦健康、高蛋白或低碳水的餐點'; 
   const prefInput = document.getElementById('userPref');
@@ -253,7 +257,6 @@ function typeEmoji(types) {
   return '🍽️';
 }
 
-// 🌟 升級：根據所選「時段」，動態調整 Google Maps 搜尋關鍵字，從源頭精準分流
 function nearbySearchBoth(svc, location, radius, meal) {
   return new Promise(resolve => {
     let kw1 = '餐廳';
@@ -352,9 +355,7 @@ function formatPlace(p) {
   };
 }
 
-// 🌟 嚴格時間裁切器：判斷店家取得的實際營業時間是否符合「早/午/晚/宵夜」的常理
 function isMealTimeMatch(r, meal) {
-  // 如果還沒拿到詳細時間，先放行，等背景抓到再判斷
   if (!r.weekdayText) return true;
 
   const today = new Date().getDay();
@@ -364,7 +365,6 @@ function isMealTimeMatch(r, meal) {
   if (todayText.includes('休息') || todayText.includes('Closed')) return false;
   if (todayText.includes('24 小時') || todayText.includes('24 hours')) return true;
 
-  // 解析所有的時間段 (例如 "11:30 – 14:30, 17:00 – 21:00")
   const times = [...todayText.matchAll(/(\d{1,2}):(\d{2})/g)];
   if (times.length === 0 || times.length % 2 !== 0) return true;
 
@@ -372,7 +372,7 @@ function isMealTimeMatch(r, meal) {
   for (let i = 0; i < times.length; i += 2) {
      const startM = parseInt(times[i][1]) * 60 + parseInt(times[i][2]);
      let endM = parseInt(times[i+1][1]) * 60 + parseInt(times[i+1][2]);
-     if (endM <= startM) endM += 24 * 60; // 處理跨夜的情況 (如 17:00 - 02:00)
+     if (endM <= startM) endM += 24 * 60; 
 
      if (meal === '早餐') {
         if (startM <= 9*60 && endM >= 7*60) valid = true;
@@ -381,15 +381,12 @@ function isMealTimeMatch(r, meal) {
      } else if (meal === '晚餐') {
         if (startM <= 20*60 && endM >= 17*60) valid = true;
      } else if (meal === '消夜') {
-        // 嚴格過濾宵夜：必須營業到晚上 10 點 (22:00) 以後，或是凌晨才開的店
-        // 這樣就能完美把 18:00~20:00 的店給剔除掉
         if (endM >= 22 * 60 || startM <= 3 * 60) valid = true;
      }
   }
   return valid;
 }
 
-// 🌟 升級：無上限背景動態抓取
 function fetchOpenStatusBatch(list, svc, interval = 150) {
   return new Promise(resolve => {
     const needsFetch = list.filter(r => r.isOpen === null && r.placeId);
@@ -411,14 +408,12 @@ function fetchOpenStatusBatch(list, svc, interval = 150) {
                 r.isOpen = false;
               }
               
-              // 1. 更新營業狀態標籤
               const tag = document.getElementById(`open-tag-${r.placeId}`);
               if (tag) {
                 tag.className = r.isOpen === true ? 'r-tag open' : (r.isOpen === false ? 'r-tag closed' : 'r-tag unknown');
                 tag.textContent = r.isOpen === true ? '營業中' : (r.isOpen === false ? '休息中' : '確認中');
               }
               
-              // 2. 動態時間裁切：如果抓到的營業時間不符合時段(例如選宵夜但只開到20:00)，直接讓它消失
               const card = document.getElementById(`card-${r.placeId}`);
               if (card) {
                  const currentMeal = document.querySelector('.page.active').id === 'aiPage' ? state.ai.meal : state.search.meal;
@@ -430,7 +425,7 @@ function fetchOpenStatusBatch(list, svc, interval = 150) {
             if (--pending === 0) resolve();
           }
         );
-      }, i * interval); // 慢慢要資料，避開 Google API 限制
+      }, i * interval); 
     });
 
     setTimeout(() => { resolve(); }, needsFetch.length * interval + 1000);
@@ -494,9 +489,7 @@ async function askAI() {
     aiRestaurants = list;
 
     header.textContent = '確認營業狀態…';
-    // 保證前 20 家一定有準確狀態給 AI 判斷
     await fetchOpenStatusBatch(aiRestaurants.slice(0, 20), aiPlacesService, 80);
-    // 剩下的放背景慢慢抓
     fetchOpenStatusBatch(aiRestaurants.slice(20), aiPlacesService, 200);
 
     const listCtx  = aiRestaurants.length
@@ -596,7 +589,7 @@ function renderAIGroup(container, list, label, bc) {
 }
 
 /* ══════════════════════════════════════
-   GENERAL SEARCH 
+   GENERAL SEARCH & DICE (🌟 Gamification 加入)
 ══════════════════════════════════════ */
 async function searchNearby() {
   const pg = state.search;
@@ -634,11 +627,9 @@ async function searchNearby() {
     list.sort((a, b) => (a.mins || 0) - (b.mins || 0));
     allRestaurants = list;
 
-    // 先保證畫面上前 20 家一定有狀態 (等待約 1~1.5 秒)
     await fetchOpenStatusBatch(allRestaurants.slice(0, 20), placesService, 80);
     renderResults(allRestaurants);
 
-    // 剩下無上限的名單在背景以安全速率慢慢抓，抓到會自動更新畫面或過濾掉
     if (allRestaurants.length > 20) {
       fetchOpenStatusBatch(allRestaurants.slice(20), placesService, 200);
     }
@@ -650,18 +641,59 @@ async function searchNearby() {
   }
 }
 
-function pickRandom() {
+// 🌟 暴躁 AI 懲罰模式
+async function pickRandom() {
   if (!allRestaurants || allRestaurants.length === 0) {
-    showToast('請先搜尋附近餐廳載入名單！');
+    showToast('請先點擊「掃描周邊餐廳」載入名單！');
     return;
   }
   let pool = allRestaurants.filter(r => r.isOpen === true);
   if (pool.length === 0) pool = allRestaurants;
 
+  // 紀錄點擊次數 (20秒內連按)
+  const now = Date.now();
+  if (now - lastDiceTime > 20000) diceClickCount = 0; 
+  lastDiceTime = now;
+  diceClickCount++;
+
   const overlay = document.getElementById('diceOverlay');
   const textEl  = document.getElementById('diceText');
   overlay.classList.add('show');
   
+  if (diceClickCount >= 5) {
+    diceClickCount = 0;
+    textEl.innerHTML = `<span style="color:var(--red); font-size:26px; text-shadow:0 0 15px var(--red);">⚠️ 系統警告 ⚠️</span><br><br><span style="font-size:16px; color:var(--mt);">偵測到嚴重選擇困難<br>正在喚醒暴躁 AI 模組...</span>`;
+    
+    const finalPlace = pool[Math.floor(Math.random() * pool.length)];
+    const originalIdx = allRestaurants.indexOf(finalPlace);
+
+    const prompt = `使用者有嚴重的選擇困難症，已經連續按了5次重新隨機抽籤。請你化身為一個暴躁、毒舌但充滿幽默想像力的 AI，強制命令使用者去吃「${finalPlace.name}」。\n要求：\n1. 語氣要非常不耐煩、帶點搞笑的超現實恐嚇（例如派一隻暴龍去把他跟滷肉飯一起吃掉之類的）。\n2. 告訴他「就是這家了，不准換！」。\n3. 字數控制在 50~80 字以內，直接給文字。`;
+
+    try {
+      const resp = await fetch(WORKER_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await resp.json();
+      let txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+      if (!txt) throw new Error();
+
+      textEl.innerHTML = `<span style="color:var(--red); font-size:26px;">🤬 暴躁模式啟動</span><br><br><span style="font-size:16px; color:var(--mt); line-height:1.6; max-width:80%; display:inline-block;">${txt}</span>`;
+      setTimeout(() => {
+        overlay.classList.remove('show');
+        showDetail(originalIdx, true, txt); 
+      }, 5000); 
+    } catch(e) {
+      const fallbackTxt = `再按啊！再猶豫我就立刻派一隻暴龍過去，把你跟滷肉飯一起吞進肚子裡！聽好了，就是「${finalPlace.name}」，馬上給我出發，不准再換了！`;
+      textEl.innerHTML = `<span style="color:var(--red); font-size:26px;">🤬 暴躁模式啟動</span><br><br><span style="font-size:16px; color:var(--mt); line-height:1.6; max-width:80%; display:inline-block;">${fallbackTxt}</span>`;
+      setTimeout(() => {
+        overlay.classList.remove('show');
+        showDetail(originalIdx, true, fallbackTxt);
+      }, 4000);
+    }
+    return;
+  }
+
   let count = 0;
   const interval = setInterval(() => {
     const tempPlace = pool[Math.floor(Math.random() * pool.length)];
@@ -684,7 +716,6 @@ function pickRandom() {
 
 function renderResults(list) {
   const pg = state.search;
-  // 先進行一次靜態裁切
   const filtered = list.filter(r => isMealTimeMatch(r, pg.meal));
   const sorted = filtered;
   
@@ -733,7 +764,6 @@ function renderGroup(container, list, label, bc) {
                   
     const typeTag = r.types.length ? `<span class="r-tag">${r.types[0].replace(/_/g,' ')}</span>` : '';
     
-    // 加入 id 以供背景抓取後動態隱藏
     return `<div class="r-card" id="card-${r.placeId || ri}" style="animation-delay:${i*0.04}s" onclick="showDetail(${ri})">
       ${thumb}
       <div class="r-body">
@@ -752,9 +782,9 @@ function renderGroup(container, list, label, bc) {
 }
 
 /* ══════════════════════════════════════
-   Detail
+   Detail (🌟 包含 UI 鎖定邏輯)
 ══════════════════════════════════════ */
-function showDetail(idx) {
+function showDetail(idx, isAngryMode = false, angryMessage = '') {
   const r     = allRestaurants[idx];
   const emoji = typeEmoji(r.types);
   currentDetailPlace = r;
@@ -797,6 +827,38 @@ function showDetail(idx) {
     '<div class="loading-dots"><div class="ld"></div><div class="ld"></div><div class="ld"></div></div>';
 
   showPage('detailPage');
+
+  // 🌟 暴躁模式 UI 鎖定
+  const backBtn = document.getElementById('detailBackBtn');
+  const angryBanner = document.getElementById('dAngryBanner');
+  
+  if (isAngryMode) {
+    backBtn.style.pointerEvents = 'none';
+    backBtn.style.opacity = '0.3';
+    backBtn.textContent = '🔒 鎖定中 (5)';
+    
+    angryBanner.innerHTML = `🤬 ${angryMessage}`;
+    angryBanner.style.display = 'block';
+
+    let left = 5;
+    const timer = setInterval(() => {
+      left--;
+      if (left <= 0) {
+        clearInterval(timer);
+        backBtn.style.pointerEvents = 'auto';
+        backBtn.style.opacity = '1';
+        backBtn.textContent = '← 返回';
+        angryBanner.style.display = 'none';
+      } else {
+        backBtn.textContent = `🔒 鎖定中 (${left})`;
+      }
+    }, 1000);
+  } else {
+    backBtn.style.pointerEvents = 'auto';
+    backBtn.style.opacity = '1';
+    backBtn.textContent = '← 返回';
+    if(angryBanner) angryBanner.style.display = 'none';
+  }
 
   if (placesService && r.placeId) {
     placesService.getDetails({
