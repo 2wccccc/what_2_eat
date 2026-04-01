@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════
-   吃什麼？— app.js (Cyberpunk Tech Edition)
+   吃什麼？— app.js
    ══════════════════════════════════════ */
 
 const GKEY       = 'AIzaSyAf96oPZjdLci_LV74k4DzvjgaHSsGTFW8';
@@ -22,20 +22,6 @@ let currentWeatherCtx = '';
 
 let currentDetailPlace = null;
 
-// Google Maps 科技感深色主題
-const darkMapStyle = [
-  { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0f172a' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
-  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#00f2fe' }] },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#a855f7' }] },
-  { featureType: 'poi.business', stylers: [{ visibility: 'simplified' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#0b1120' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#64748b' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#000000' }] },
-];
-
 document.addEventListener('DOMContentLoaded', () => {
   const savedPref = localStorage.getItem('what2eat_pref') || '想減內臟脂肪，盡量推薦健康、高蛋白或低碳水的餐點'; 
   const prefInput = document.getElementById('userPref');
@@ -44,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function savePref(val) {
   localStorage.setItem('what2eat_pref', val.trim());
-  showToast('偏好設定已儲存至本地端');
+  showToast('偏好設定已儲存');
 }
 
 async function fetchWeather(lat, lng) {
@@ -92,13 +78,13 @@ window.addEventListener('scroll', () => {
 
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = `[ SYSTEM ] ${msg}`; t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
 function showErr(bannerId, msg) {
   const b = document.getElementById(bannerId);
-  b.textContent = `[ ERROR ] ${msg}`; b.classList.add('show');
+  b.textContent = msg; b.classList.add('show');
   setTimeout(() => b.classList.remove('show'), 6000);
 }
 
@@ -142,18 +128,18 @@ function budgetMatch(priceLevel, budget) {
 
 function locateMe(page) {
   const s = document.getElementById(`${page}LocateStatus`);
-  s.textContent = 'GPS 訊號追蹤中…'; s.className = 'locate-status';
-  if (!navigator.geolocation) { s.textContent = '定位模組未授權'; return; }
+  s.textContent = '定位中…'; s.className = 'locate-status';
+  if (!navigator.geolocation) { s.textContent = '定位未授權'; return; }
   navigator.geolocation.getCurrentPosition(
     pos => {
       state[page].lat = pos.coords.latitude;
       state[page].lng = pos.coords.longitude;
-      s.textContent = `座標鎖定 [${state[page].lat.toFixed(3)}, ${state[page].lng.toFixed(3)}]`;
+      s.textContent = `已鎖定 (${state[page].lat.toFixed(3)}, ${state[page].lng.toFixed(3)})`;
       s.className = 'locate-status ok';
     },
     () => {
       state[page].lat = 24.1477; state[page].lng = 120.6736;
-      s.textContent = '啟用預設座標 (台中市)';
+      s.textContent = '使用預設位置 (台中市)';
       s.className = 'locate-status ok';
     }
   );
@@ -192,9 +178,9 @@ async function initMap() {
     await loadGMaps();
     const lat = state.search.lat || 24.1477;
     const lng = state.search.lng || 120.6736;
+    // 🌟 移除了暗黑地圖，還原乾淨明亮的預設風格，保證地圖清晰呈現
     mapInstance = new google.maps.Map(document.getElementById('googleMap'), {
-      center: { lat, lng }, zoom: 15, mapTypeControl: false, fullscreenControl: false,
-      styles: darkMapStyle // 🌟 套用科技感暗黑地圖
+      center: { lat, lng }, zoom: 15, mapTypeControl: false, fullscreenControl: false
     });
   } catch(e) {}
 }
@@ -238,8 +224,8 @@ async function sharePlace() {
     : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
   const shareData = {
-    title: `目標確認：${name}`,
-    text: `傳送座標數據「${name}」\n${stars}\n${address ? '節點位置: '+address : ''}\n`,
+    title: `今晚吃這個！${name}`,
+    text: `推薦一間不錯的店「${name}」\n${stars}\n${address ? '地址: '+address : ''}\n`,
     url: url
   };
 
@@ -247,12 +233,12 @@ async function sharePlace() {
     try { await navigator.share(shareData); } catch (err) {}
   } else {
     navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-    showToast('數據已複製至剪貼簿');
+    showToast('連結已複製至剪貼簿');
   }
 }
 
 function getRadius(t) { return t === '開車' ? 5000 : t === '騎車' ? 3000 : 1500; }
-function priceLevelStr(lvl) { return {0:'FREE',1:'$ LOW',2:'$$ MID',3:'$$$ HIGH',4:'$$$$ MAX'}[lvl] ?? 'UNKNOWN'; }
+function priceLevelStr(lvl) { return {0:'免費',1:'$ 平價',2:'$$ 中等',3:'$$$ 偏高',4:'$$$$ 高級'}[lvl] ?? '未提供'; }
 function starsStr(r) { const f = Math.round(r||0); return '★'.repeat(f)+'☆'.repeat(5-f); }
 function typeEmoji(types) {
   const t = (types||[]).join(',');
@@ -267,7 +253,7 @@ function typeEmoji(types) {
   return '🍽️';
 }
 
-// 🌟 核心升級：平行多線程搜尋，強制挖出外帶小吃店
+// 🌟 多重平行搜尋：保證抓到外帶和小吃
 function nearbySearchBoth(svc, location, radius) {
   return new Promise(resolve => {
     const queries = [
@@ -375,7 +361,7 @@ async function askAI() {
   const body   = document.getElementById('aiResultBody');
   const header = document.getElementById('aiResultHeader');
   box.classList.add('show');
-  header.textContent = '系統掃描周邊節點中…';
+  header.textContent = '系統掃描周邊店家…';
   
   showSkeleton('aiResultBody');
 
@@ -394,7 +380,7 @@ async function askAI() {
   } catch(e) { aiRestaurants = []; }
 
   if (aiRestaurants.length && distMatrixSvc) {
-    header.textContent = '計算路徑距離中…';
+    header.textContent = '計算交通時間…';
     const times = await fetchTravelTimes(
       [new google.maps.LatLng(pg.lat, pg.lng)],
       aiRestaurants.map(r => new google.maps.LatLng(r.lat, r.lng)),
@@ -409,7 +395,7 @@ async function askAI() {
 
   aiRestaurants.sort((a, b) => (a.mins || 0) - (b.mins || 0));
 
-  header.textContent = '同步伺服器營業狀態…';
+  header.textContent = '確認店家營業狀態…';
   await fetchOpenStatusBatch(aiRestaurants.slice(0, 15), aiPlacesService);
 
   const filtered = aiRestaurants.filter(r => budgetMatch(r.priceLevel, pg.budget));
@@ -431,7 +417,7 @@ async function askAI() {
     `從清單中嚴選最符合上述所有條件的 3-5 間（優先選「營業中」的），只輸出 JSON（不要其他文字）：\n` +
     `[{"name":"店名","mins":分鐘數,"rating":評分,"priceLevel":0-4,"isOpen":true/false/null,"desc":"20字內介紹為何推薦這家(需結合天氣或偏好)"}]`;
 
-  header.textContent = 'AI 核心處理分析中…';
+  header.textContent = 'AI 認真思考中…';
   try {
     const resp = await fetch(WORKER_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -442,7 +428,7 @@ async function askAI() {
     let txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g,'').trim();
     let shops = [];
     try { shops = JSON.parse(txt); } catch(e) {
-      header.textContent = '分析結果匯出';
+      header.textContent = 'AI 推薦如下';
       body.innerHTML = `<div style="padding:4px 0;font-size:14px;color:var(--mt);line-height:1.8;">${txt.replace(/\n/g,'<br>')}</div>`;
       return;
     }
@@ -457,14 +443,14 @@ async function askAI() {
       };
     });
 
-    header.textContent = `偵測到 ${matched.length} 個高匹配度目標`;
+    header.textContent = `根據您的需求，找到了 ${matched.length} 個絕佳選項`;
     body.innerHTML = '';
     renderAIGroup(body, matched.filter(r => (r.mins||0) <= 10),              '🟢 近（10 分鐘內）',     'near');
     renderAIGroup(body, matched.filter(r => (r.mins||0) > 10 && (r.mins||0) <= 20), '🔵 一般（10–20 分鐘）', 'mid');
     renderAIGroup(body, matched.filter(r => (r.mins||0) > 20),               '🟣 遠（20 分鐘以上）',   'far');
 
   } catch(e) {
-    body.innerHTML = `<div style="color:var(--red);padding:8px 0;font-size:13px;">錯誤報告：${e.message}</div>`;
+    body.innerHTML = `<div style="color:var(--red);padding:8px 0;font-size:13px;">錯誤：${e.message}</div>`;
     header.textContent = '連線失敗';
   }
 }
@@ -476,8 +462,8 @@ function renderAIGroup(container, list, label, bc) {
   list.forEach(s => {
     const ri = aiRestaurants.findIndex(r => r.name === s.name);
     const clickable = ri >= 0;
-    const openTag = s.isOpen === true  ? '<span class="r-tag open">ONLINE</span>'
-                  : s.isOpen === false ? '<span class="r-tag closed">OFFLINE</span>' : '';
+    const openTag = s.isOpen === true  ? '<span class="r-tag open">營業中</span>'
+                  : s.isOpen === false ? '<span class="r-tag closed">休息中</span>' : '';
     const card = document.createElement('div');
     card.className = `ai-shop-card${clickable ? ' clickable' : ''}`;
     if (clickable) card.onclick = () => {
@@ -492,7 +478,7 @@ function renderAIGroup(container, list, label, bc) {
           <div class="ai-shop-name">${s.name}</div>
           <div class="ai-shop-desc">${s.desc || ''}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center;">
-            <span class="dbadge b-${bc}">ETA: ${s.mins} min</span>${openTag}
+            <span class="dbadge b-${bc}">${s.mins} min</span>${openTag}
           </div>
           <div class="ai-shop-rating">${starsStr(s.rating)} ${s.rating || '—'}</div>
         </div>
@@ -547,7 +533,7 @@ async function searchNearby() {
 
 function pickRandom() {
   if (!allRestaurants || allRestaurants.length === 0) {
-    showToast('請先啟動雷達掃描 (搜尋餐廳)');
+    showToast('請先搜尋附近餐廳載入名單！');
     return;
   }
   let pool = allRestaurants.filter(r => r.isOpen === true);
@@ -566,7 +552,7 @@ function pickRandom() {
     if (count > 15) {
       clearInterval(interval);
       const finalPlace = pool[Math.floor(Math.random() * pool.length)];
-      textEl.innerHTML = `<span style="font-size:16px;color:var(--mm);">> 目標已鎖定_</span><br><br><span style="color:var(--mb);font-size:26px;text-shadow:0 0 10px var(--mb);">${finalPlace.name}</span>`;
+      textEl.innerHTML = `<span style="font-size:16px;color:var(--mt);">這餐就吃...</span><br><br><span style="color:var(--mb);font-size:26px;">${finalPlace.name}</span>`;
       const originalIdx = allRestaurants.indexOf(finalPlace);
 
       setTimeout(() => {
@@ -590,14 +576,14 @@ function renderResults(list) {
 
   const sum = document.createElement('div');
   sum.className = 'results-summary';
-  sum.textContent = `[ DATA ] ${filtered.length} NODES FOUND / ${pg.transport.toUpperCase()} / ${pg.budget >= 1500 ? 'UNLIMITED' : '< $'+pg.budget}`;
+  sum.textContent = `共 ${filtered.length} 間 · ${pg.transport} · ${pg.budget >= 1500 ? '預算不限' : '< $'+pg.budget}`;
   el.appendChild(sum);
 
   document.getElementById('detailBackBtn').setAttribute('onclick', "showPage('searchPage')");
   
-  renderGroup(el, sorted.filter(r => (r.mins||0) <= t1),                         `🟢 近區段 ( < ${t1} MIN )`,        'near');
-  renderGroup(el, sorted.filter(r => (r.mins||0) > t1 && (r.mins||0) <= t2),     `🔵 中區段 ( ${t1}–${t2} MIN )`, 'mid');
-  renderGroup(el, sorted.filter(r => (r.mins||0) > t2),                          `🟣 遠區段 ( > ${t2} MIN )`,      'far');
+  renderGroup(el, sorted.filter(r => (r.mins||0) <= t1),                         `🟢 近距離 ( < ${t1} 分鐘 )`,        'near');
+  renderGroup(el, sorted.filter(r => (r.mins||0) > t1 && (r.mins||0) <= t2),     `🔵 一般距離 ( ${t1}–${t2} 分鐘 )`, 'mid');
+  renderGroup(el, sorted.filter(r => (r.mins||0) > t2),                          `🟣 較遠 ( > ${t2} 分鐘 )`,      'far');
 }
 
 function renderGroup(container, list, label, bc) {
@@ -606,9 +592,9 @@ function renderGroup(container, list, label, bc) {
     sec.innerHTML = `
       <div class="sec-label">${label} <span class="sec-count">0</span></div>
       <div class="empty-group">
-        <div class="empty-emoji">📡</div>
-        <div class="empty-title">查無訊號</div>
-        <div style="font-family:monospace">此區段未掃描到符合條件的目標<br>建議調整系統過濾參數</div>
+        <div style="font-size:36px; margin-bottom:12px;">🔍</div>
+        <div style="font-size:15px; font-weight:bold; color:var(--mt); margin-bottom:4px;">找不到餐廳</div>
+        <div style="font-size:13px; color:var(--mm);">此距離沒有符合條件的結果<br>建議調整預算或交通工具</div>
       </div>`;
     container.appendChild(sec); return;
   }
@@ -619,18 +605,18 @@ function renderGroup(container, list, label, bc) {
     const thumb = r.photos[0]
       ? `<img class="r-thumb lazy-fade" src="${r.photos[0]}" loading="lazy" alt="" onerror="this.outerHTML='<div class=\\'r-thumb-placeholder\\'>${emoji}</div>'">`
       : `<div class="r-thumb-placeholder">${emoji}</div>`;
-    const openTag = r.isOpen === true  ? '<span class="r-tag open">ONLINE</span>'
-                  : r.isOpen === false ? '<span class="r-tag closed">OFFLINE</span>'
-                  :                     '<span class="r-tag unknown">PENDING</span>';
-    const typeTag = r.types.length ? `<span class="r-tag">${r.types[0].replace(/_/g,' ').toUpperCase()}</span>` : '';
+    const openTag = r.isOpen === true  ? '<span class="r-tag open">營業中</span>'
+                  : r.isOpen === false ? '<span class="r-tag closed">休息中</span>'
+                  :                     '<span class="r-tag unknown">確認中</span>';
+    const typeTag = r.types.length ? `<span class="r-tag">${r.types[0].replace(/_/g,' ')}</span>` : '';
     return `<div class="r-card" style="animation-delay:${i*0.04}s" onclick="showDetail(${ri})">
       ${thumb}
       <div class="r-body">
         <div class="r-name">${r.name}</div>
-        <div class="r-tags"><span class="dbadge b-${bc}">ETA ${r.mins ?? '?'}m</span>${typeTag}${openTag}</div>
+        <div class="r-tags"><span class="dbadge b-${bc}">${r.mins ?? '?'} min</span>${typeTag}${openTag}</div>
         <div class="r-footer">
-          <span class="r-stars" style="color:var(--mb)">${starsStr(r.rating)} ${r.rating||'—'}</span>
-          <span class="r-meta">${priceLevelStr(r.priceLevel)}</span>
+          <span class="r-stars" style="color:var(--amber)">${starsStr(r.rating)} ${r.rating||'—'}</span>
+          <span style="font-size:12px;color:var(--mm);">${priceLevelStr(r.priceLevel)}</span>
         </div>
       </div>
     </div>`;
@@ -651,24 +637,24 @@ function showDetail(idx) {
     : `<div class="detail-hero-placeholder">${emoji}</div>`;
 
   document.getElementById('dName').textContent    = r.name;
-  document.getElementById('dDist').textContent    = r.mins != null ? `ETA: ${r.mins} MIN` : '';
-  document.getElementById('dRating').innerHTML    = `<span class="stars-lg" style="color:var(--mb)">${starsStr(r.rating)}</span> ${r.rating||'—'}`;
-  document.getElementById('dReviews').textContent = r.reviews ? `${r.reviews.toLocaleString()} DATA` : '—';
+  document.getElementById('dDist').textContent    = r.mins != null ? `${r.mins} 分鐘` : '';
+  document.getElementById('dRating').innerHTML    = `<span class="stars-lg" style="color:var(--amber)">${starsStr(r.rating)}</span> ${r.rating||'—'}`;
+  document.getElementById('dReviews').textContent = r.reviews ? `${r.reviews.toLocaleString()} 則評論` : '—';
   document.getElementById('dPrice').textContent   = priceLevelStr(r.priceLevel);
   document.getElementById('dAddr').textContent    = r.address || '—';
-  document.getElementById('dPhone').textContent   = 'DECRYPTING…';
+  document.getElementById('dPhone').textContent   = '查詢中…';
 
   const openBadge = document.getElementById('dOpenBadge');
   const setOpen   = v => {
-    openBadge.textContent = v === true ? '[ STATUS: ONLINE ]' : v === false ? '[ STATUS: OFFLINE ]' : '';
-    openBadge.style.color = v === true ? 'var(--mb)' : v === false ? 'var(--red)' : '';
+    openBadge.textContent = v === true ? '✓ 營業中' : v === false ? '✗ 休息中' : '';
+    openBadge.style.color = v === true ? 'var(--green)' : v === false ? 'var(--red)' : '';
   };
   setOpen(r.isOpen);
 
   const hoursEl = document.getElementById('dHours');
   hoursEl.innerHTML = r.weekdayText?.length
     ? renderHoursHTML(r.weekdayText)
-    : '<span style="color:var(--mg)">DECRYPTING…</span>';
+    : '<span style="color:var(--mg)">查詢中…</span>';
 
   const ph = document.getElementById('dPhotos');
   const renderPhotos = photos => {
@@ -690,19 +676,19 @@ function showDetail(idx) {
       fields: ['formatted_phone_number','opening_hours','photos','utc_offset_minutes']
     }, (res, status) => {
       if (status !== google.maps.places.PlacesServiceStatus.OK) {
-        document.getElementById('dPhone').textContent = 'UNKNOWN';
-        if (!r.weekdayText) hoursEl.textContent = 'UNKNOWN';
+        document.getElementById('dPhone').textContent = '未提供';
+        if (!r.weekdayText) hoursEl.textContent = '未提供';
         fetchReviewSummary(r); return;
       }
-      document.getElementById('dPhone').textContent = res?.formatted_phone_number || 'UNKNOWN';
+      document.getElementById('dPhone').textContent = res?.formatted_phone_number || '未提供';
 
       if (res?.opening_hours) {
         r.isOpen      = res.opening_hours.isOpen();
         r.weekdayText = res.opening_hours.weekday_text || null;
         setOpen(r.isOpen);
-        hoursEl.innerHTML = r.weekdayText ? renderHoursHTML(r.weekdayText) : 'UNKNOWN';
+        hoursEl.innerHTML = r.weekdayText ? renderHoursHTML(r.weekdayText) : '未提供';
       } else {
-        if (!r.weekdayText) hoursEl.textContent = 'UNKNOWN';
+        if (!r.weekdayText) hoursEl.textContent = '未提供';
       }
 
       if (res?.photos?.length) {
@@ -726,7 +712,7 @@ function renderHoursHTML(weekdayText) {
   const today  = new Date().getDay();
   const dayIdx = today === 0 ? 6 : today - 1;
   return weekdayText.map((d, i) =>
-    `<div class="${i === dayIdx ? 'hours-today' : ''}" style="${i === dayIdx ? 'color:var(--mb);font-weight:bold;text-shadow:var(--glow)' : ''}">${d}</div>`
+    `<div class="${i === dayIdx ? 'hours-today' : ''}" style="${i === dayIdx ? 'color:var(--mb);font-weight:bold;' : ''}">${d}</div>`
   ).join('');
 }
 
@@ -746,12 +732,12 @@ async function fetchReviewSummary(r) {
     let txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g,'').trim();
     const obj = JSON.parse(txt);
     el.innerHTML =
-      `<div style="margin-bottom:6px;font-size:11px;color:var(--mb);letter-spacing:1px;text-transform:uppercase;">[ POSITIVE ]</div>` +
+      `<div style="margin-bottom:6px;font-size:11px;color:var(--mb);letter-spacing:1px;font-weight:bold;">正面評價</div>` +
       obj.pos.map(p => `<span class="review-tag pos">✓ ${p}</span>`).join('') +
-      `<div style="margin:10px 0 6px;font-size:11px;color:var(--red);letter-spacing:1px;text-transform:uppercase;">[ NEGATIVE ]</div>` +
+      `<div style="margin:10px 0 6px;font-size:11px;color:var(--red);letter-spacing:1px;font-weight:bold;">負面評價</div>` +
       obj.neg.map(n => `<span class="review-tag neg">✕ ${n}</span>`).join('');
   } catch(e) {
-    el.innerHTML = '<span style="font-size:13px;color:var(--mm);">[ ERROR ] 分析模組離線</span>';
+    el.innerHTML = '<span style="font-size:13px;color:var(--mm);">無法取得 AI 摘要</span>';
   }
 }
 
