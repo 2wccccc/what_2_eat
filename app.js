@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════
-   吃什麼？— app.js
+   吃什麼？— app.js (Cyberpunk Tech Edition)
    ══════════════════════════════════════ */
 
 const GKEY       = 'AIzaSyAf96oPZjdLci_LV74k4DzvjgaHSsGTFW8';
@@ -22,6 +22,20 @@ let currentWeatherCtx = '';
 
 let currentDetailPlace = null;
 
+// Google Maps 科技感深色主題
+const darkMapStyle = [
+  { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0f172a' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#00f2fe' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#a855f7' }] },
+  { featureType: 'poi.business', stylers: [{ visibility: 'simplified' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#0b1120' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#64748b' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#000000' }] },
+];
+
 document.addEventListener('DOMContentLoaded', () => {
   const savedPref = localStorage.getItem('what2eat_pref') || '想減內臟脂肪，盡量推薦健康、高蛋白或低碳水的餐點'; 
   const prefInput = document.getElementById('userPref');
@@ -30,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function savePref(val) {
   localStorage.setItem('what2eat_pref', val.trim());
-  showToast('偏好已儲存');
+  showToast('偏好設定已儲存至本地端');
 }
 
 async function fetchWeather(lat, lng) {
@@ -41,15 +55,9 @@ async function fetchWeather(lat, lng) {
     const code = data.current_weather.weathercode;
     const isRaining = code >= 50; 
     currentWeatherCtx = `目前當地天氣：氣溫 ${temp} 度C，${isRaining ? '正在下雨 (請優先推薦室內舒適、好停車或極近距離的店)' : '天氣穩定'}。`;
-  } catch(e) {
-    console.warn('天氣取得失敗', e);
-    currentWeatherCtx = '';
-  }
+  } catch(e) { currentWeatherCtx = ''; }
 }
 
-/* ══════════════════════════════════════
-   UI Helpers & 骨架屏 Skeleton
-══════════════════════════════════════ */
 function showLanding() {
   document.getElementById('appShell').style.display = 'none';
   document.getElementById('landingPage').style.display = 'block';
@@ -84,17 +92,16 @@ window.addEventListener('scroll', () => {
 
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
+  t.textContent = `[ SYSTEM ] ${msg}`; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
 function showErr(bannerId, msg) {
   const b = document.getElementById(bannerId);
-  b.textContent = msg; b.classList.add('show');
+  b.textContent = `[ ERROR ] ${msg}`; b.classList.add('show');
   setTimeout(() => b.classList.remove('show'), 6000);
 }
 
-// 🌟 新增：繪製骨架屏
 function showSkeleton(containerId) {
   const el = document.getElementById(containerId);
   let html = '<div style="padding: 16px 16px 0;">';
@@ -113,9 +120,6 @@ function showSkeleton(containerId) {
   el.innerHTML = html;
 }
 
-/* ══════════════════════════════════════
-   Filters & Locate
-══════════════════════════════════════ */
 function setChip(el, groupId, stateKey) {
   document.getElementById(groupId).querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
@@ -138,26 +142,23 @@ function budgetMatch(priceLevel, budget) {
 
 function locateMe(page) {
   const s = document.getElementById(`${page}LocateStatus`);
-  s.textContent = '定位中…'; s.className = 'locate-status';
-  if (!navigator.geolocation) { s.textContent = '不支援定位'; return; }
+  s.textContent = 'GPS 訊號追蹤中…'; s.className = 'locate-status';
+  if (!navigator.geolocation) { s.textContent = '定位模組未授權'; return; }
   navigator.geolocation.getCurrentPosition(
     pos => {
       state[page].lat = pos.coords.latitude;
       state[page].lng = pos.coords.longitude;
-      s.textContent = `已定位 (${state[page].lat.toFixed(3)}, ${state[page].lng.toFixed(3)})`;
+      s.textContent = `座標鎖定 [${state[page].lat.toFixed(3)}, ${state[page].lng.toFixed(3)}]`;
       s.className = 'locate-status ok';
     },
     () => {
       state[page].lat = 24.1477; state[page].lng = 120.6736;
-      s.textContent = '使用預設位置（台中市）';
+      s.textContent = '啟用預設座標 (台中市)';
       s.className = 'locate-status ok';
     }
   );
 }
 
-/* ══════════════════════════════════════
-   Google Maps Loader & Platform Navigation
-══════════════════════════════════════ */
 function loadGMaps() {
   return new Promise((res, rej) => {
     if (mapsLoaded && window.google?.maps) { res(); return; }
@@ -193,8 +194,9 @@ async function initMap() {
     const lng = state.search.lng || 120.6736;
     mapInstance = new google.maps.Map(document.getElementById('googleMap'), {
       center: { lat, lng }, zoom: 15, mapTypeControl: false, fullscreenControl: false,
+      styles: darkMapStyle // 🌟 套用科技感暗黑地圖
     });
-  } catch(e) { console.error('Map init failed', e); }
+  } catch(e) {}
 }
 
 function searchOnMap() {
@@ -227,7 +229,6 @@ function openMaps() {
   }
 }
 
-// 🌟 新增：一鍵分享給朋友 (Web Share API)
 async function sharePlace() {
   if (!currentDetailPlace) return;
   const { name, rating, address, placeId, lat, lng } = currentDetailPlace;
@@ -237,26 +238,21 @@ async function sharePlace() {
     : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
   const shareData = {
-    title: `今晚吃這個！${name}`,
-    text: `推薦一間不錯的店「${name}」\n${stars}\n${address ? '地址: '+address : ''}\n`,
+    title: `目標確認：${name}`,
+    text: `傳送座標數據「${name}」\n${stars}\n${address ? '節點位置: '+address : ''}\n`,
     url: url
   };
 
   if (navigator.share) {
-    try {
-      await navigator.share(shareData);
-    } catch (err) { console.log('分享取消或失敗', err); }
+    try { await navigator.share(shareData); } catch (err) {}
   } else {
     navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-    showToast('已複製分享連結！');
+    showToast('數據已複製至剪貼簿');
   }
 }
 
-/* ══════════════════════════════════════
-   Helpers
-══════════════════════════════════════ */
 function getRadius(t) { return t === '開車' ? 5000 : t === '騎車' ? 3000 : 1500; }
-function priceLevelStr(lvl) { return {0:'免費',1:'$ 便宜',2:'$$ 中等',3:'$$$ 較貴',4:'$$$$ 高級'}[lvl] ?? '未提供'; }
+function priceLevelStr(lvl) { return {0:'FREE',1:'$ LOW',2:'$$ MID',3:'$$$ HIGH',4:'$$$$ MAX'}[lvl] ?? 'UNKNOWN'; }
 function starsStr(r) { const f = Math.round(r||0); return '★'.repeat(f)+'☆'.repeat(5-f); }
 function typeEmoji(types) {
   const t = (types||[]).join(',');
@@ -271,16 +267,28 @@ function typeEmoji(types) {
   return '🍽️';
 }
 
+// 🌟 核心升級：平行多線程搜尋，強制挖出外帶小吃店
 function nearbySearchBoth(svc, location, radius) {
   return new Promise(resolve => {
-    const types = ['restaurant', 'meal_takeaway'];
+    const queries = [
+      { type: 'restaurant' },
+      { type: 'meal_takeaway' },
+      { type: 'food', keyword: '小吃 OR 路邊攤 OR 夜市' },
+      { type: 'food', keyword: '外帶 OR 便當 OR 飲料' }
+    ];
     const seen = new Set(), combined = [];
     let done = 0;
-    types.forEach(type => {
-      svc.nearbySearch({ location, radius, type }, (results, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && results?.length)
-          results.forEach(p => { if (!seen.has(p.place_id)) { seen.add(p.place_id); combined.push(p); } });
-        if (++done === types.length) resolve(combined);
+    queries.forEach(q => {
+      svc.nearbySearch({ location, radius, ...q }, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results?.length) {
+          results.forEach(p => { 
+            if (!seen.has(p.place_id)) { 
+              seen.add(p.place_id); 
+              combined.push(p); 
+            } 
+          });
+        }
+        if (++done === queries.length) resolve(combined);
       });
     });
   });
@@ -357,9 +365,6 @@ function fallbackMins(r, pg) {
   r.mins = Math.max(1, Math.round(r.dist / spd[pg.transport]));
 }
 
-/* ══════════════════════════════════════
-   AI SEARCH
-══════════════════════════════════════ */
 async function askAI() {
   const inp = document.getElementById('aiInput').value.trim();
   if (!inp) return;
@@ -370,9 +375,8 @@ async function askAI() {
   const body   = document.getElementById('aiResultBody');
   const header = document.getElementById('aiResultHeader');
   box.classList.add('show');
-  header.textContent = '搜尋附近餐廳中…';
+  header.textContent = '系統掃描周邊節點中…';
   
-  // 🌟 使用骨架屏取代舊的 Loading
   showSkeleton('aiResultBody');
 
   try {
@@ -390,7 +394,7 @@ async function askAI() {
   } catch(e) { aiRestaurants = []; }
 
   if (aiRestaurants.length && distMatrixSvc) {
-    header.textContent = '計算距離中…';
+    header.textContent = '計算路徑距離中…';
     const times = await fetchTravelTimes(
       [new google.maps.LatLng(pg.lat, pg.lng)],
       aiRestaurants.map(r => new google.maps.LatLng(r.lat, r.lng)),
@@ -405,12 +409,12 @@ async function askAI() {
 
   aiRestaurants.sort((a, b) => (a.mins || 0) - (b.mins || 0));
 
-  header.textContent = '確認營業狀態…';
+  header.textContent = '同步伺服器營業狀態…';
   await fetchOpenStatusBatch(aiRestaurants.slice(0, 15), aiPlacesService);
 
   const filtered = aiRestaurants.filter(r => budgetMatch(r.priceLevel, pg.budget));
   const listCtx  = filtered.length
-    ? filtered.slice(0, 20).map((r, i) => {
+    ? filtered.slice(0, 40).map((r, i) => {
         const openStr = r.isOpen === true ? '營業中' : r.isOpen === false ? '未營業' : '狀態未知';
         return `${i+1}. ${r.name}｜${r.mins}分鐘｜評分${r.rating}｜${priceLevelStr(r.priceLevel)}｜${openStr}｜${r.types.join('/')}`;
       }).join('\n')
@@ -427,7 +431,7 @@ async function askAI() {
     `從清單中嚴選最符合上述所有條件的 3-5 間（優先選「營業中」的），只輸出 JSON（不要其他文字）：\n` +
     `[{"name":"店名","mins":分鐘數,"rating":評分,"priceLevel":0-4,"isOpen":true/false/null,"desc":"20字內介紹為何推薦這家(需結合天氣或偏好)"}]`;
 
-  header.textContent = 'AI 認真思考中…';
+  header.textContent = 'AI 核心處理分析中…';
   try {
     const resp = await fetch(WORKER_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -438,7 +442,7 @@ async function askAI() {
     let txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g,'').trim();
     let shops = [];
     try { shops = JSON.parse(txt); } catch(e) {
-      header.textContent = 'AI 推薦如下';
+      header.textContent = '分析結果匯出';
       body.innerHTML = `<div style="padding:4px 0;font-size:14px;color:var(--mt);line-height:1.8;">${txt.replace(/\n/g,'<br>')}</div>`;
       return;
     }
@@ -453,15 +457,15 @@ async function askAI() {
       };
     });
 
-    header.textContent = `根據您的需求，在附近找到了 ${matched.length} 個選項`;
+    header.textContent = `偵測到 ${matched.length} 個高匹配度目標`;
     body.innerHTML = '';
     renderAIGroup(body, matched.filter(r => (r.mins||0) <= 10),              '🟢 近（10 分鐘內）',     'near');
     renderAIGroup(body, matched.filter(r => (r.mins||0) > 10 && (r.mins||0) <= 20), '🔵 一般（10–20 分鐘）', 'mid');
     renderAIGroup(body, matched.filter(r => (r.mins||0) > 20),               '🟣 遠（20 分鐘以上）',   'far');
 
   } catch(e) {
-    body.innerHTML = `<div style="color:var(--red);padding:8px 0;font-size:13px;">錯誤：${e.message}</div>`;
-    header.textContent = '無法取得建議';
+    body.innerHTML = `<div style="color:var(--red);padding:8px 0;font-size:13px;">錯誤報告：${e.message}</div>`;
+    header.textContent = '連線失敗';
   }
 }
 
@@ -472,8 +476,8 @@ function renderAIGroup(container, list, label, bc) {
   list.forEach(s => {
     const ri = aiRestaurants.findIndex(r => r.name === s.name);
     const clickable = ri >= 0;
-    const openTag = s.isOpen === true  ? '<span class="r-tag open">營業中</span>'
-                  : s.isOpen === false ? '<span class="r-tag closed">未營業</span>' : '';
+    const openTag = s.isOpen === true  ? '<span class="r-tag open">ONLINE</span>'
+                  : s.isOpen === false ? '<span class="r-tag closed">OFFLINE</span>' : '';
     const card = document.createElement('div');
     card.className = `ai-shop-card${clickable ? ' clickable' : ''}`;
     if (clickable) card.onclick = () => {
@@ -488,7 +492,7 @@ function renderAIGroup(container, list, label, bc) {
           <div class="ai-shop-name">${s.name}</div>
           <div class="ai-shop-desc">${s.desc || ''}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center;">
-            <span class="dbadge b-${bc}">${s.mins} 分鐘</span>${openTag}
+            <span class="dbadge b-${bc}">ETA: ${s.mins} min</span>${openTag}
           </div>
           <div class="ai-shop-rating">${starsStr(s.rating)} ${s.rating || '—'}</div>
         </div>
@@ -499,14 +503,10 @@ function renderAIGroup(container, list, label, bc) {
   container.appendChild(sec);
 }
 
-/* ══════════════════════════════════════
-   GENERAL SEARCH & DICE
-══════════════════════════════════════ */
 async function searchNearby() {
   const pg = state.search;
   if (!pg.lat) { pg.lat = 24.1477; pg.lng = 120.6736; }
 
-  // 🌟 使用骨架屏取代舊的 Overlay
   showSkeleton('searchResults');
 
   try {
@@ -519,7 +519,7 @@ async function searchNearby() {
       placesService, new google.maps.LatLng(pg.lat, pg.lng), getRadius(pg.transport)
     );
     if (!combined.length) {
-      showErr('searchErrBanner', '找不到附近餐廳，使用示範資料');
+      showErr('searchErrBanner', '搜尋無結果，啟用模擬數據');
       allRestaurants = getMockData(pg); renderResults(allRestaurants); return;
     }
     allRestaurants = combined.map(p => formatPlace(p));
@@ -539,16 +539,15 @@ async function searchNearby() {
     renderResults(allRestaurants);
 
   } catch(e) {
-    showErr('searchErrBanner', 'Google Maps 載入失敗，使用示範資料');
+    showErr('searchErrBanner', '系統連線異常，啟用模擬數據');
     allRestaurants = getMockData(pg);
     renderResults(allRestaurants);
   }
 }
 
-// 🌟 新增：帶有儀式感的骰子過場動畫
 function pickRandom() {
   if (!allRestaurants || allRestaurants.length === 0) {
-    showToast('請先點擊「搜尋餐廳」載入附近店家！');
+    showToast('請先啟動雷達掃描 (搜尋餐廳)');
     return;
   }
   let pool = allRestaurants.filter(r => r.isOpen === true);
@@ -559,20 +558,17 @@ function pickRandom() {
   overlay.classList.add('show');
   
   let count = 0;
-  // 吃角子老虎機般的文字閃爍動畫
   const interval = setInterval(() => {
     const tempPlace = pool[Math.floor(Math.random() * pool.length)];
     textEl.textContent = tempPlace.name;
     count++;
     
-    // 轉了大概 15 次之後停下來
     if (count > 15) {
       clearInterval(interval);
       const finalPlace = pool[Math.floor(Math.random() * pool.length)];
-      textEl.innerHTML = `<span style="font-size:16px;color:var(--mm);">這餐就吃...</span><br><br><span style="color:var(--mb);font-size:26px;">${finalPlace.name}</span>`;
+      textEl.innerHTML = `<span style="font-size:16px;color:var(--mm);">> 目標已鎖定_</span><br><br><span style="color:var(--mb);font-size:26px;text-shadow:0 0 10px var(--mb);">${finalPlace.name}</span>`;
       const originalIdx = allRestaurants.indexOf(finalPlace);
 
-      // 停頓 1.2 秒讓使用者看清楚抽中什麼，再切換畫面
       setTimeout(() => {
         overlay.classList.remove('show');
         showDetail(originalIdx);
@@ -594,48 +590,46 @@ function renderResults(list) {
 
   const sum = document.createElement('div');
   sum.className = 'results-summary';
-  sum.textContent = `${filtered.length} 間 · ${pg.transport} · ${pg.meal} · ${pg.budget >= 1500 ? '不限預算' : '$'+pg.budget}`;
+  sum.textContent = `[ DATA ] ${filtered.length} NODES FOUND / ${pg.transport.toUpperCase()} / ${pg.budget >= 1500 ? 'UNLIMITED' : '< $'+pg.budget}`;
   el.appendChild(sum);
 
   document.getElementById('detailBackBtn').setAttribute('onclick', "showPage('searchPage')");
   
-  renderGroup(el, sorted.filter(r => (r.mins||0) <= t1),                         `🟢 近（${t1} 分鐘內）`,        'near');
-  renderGroup(el, sorted.filter(r => (r.mins||0) > t1 && (r.mins||0) <= t2),     `🔵 一般（${t1}–${t2} 分鐘）`, 'mid');
-  renderGroup(el, sorted.filter(r => (r.mins||0) > t2),                          `🟣 遠（${t2} 分鐘以上）`,      'far');
+  renderGroup(el, sorted.filter(r => (r.mins||0) <= t1),                         `🟢 近區段 ( < ${t1} MIN )`,        'near');
+  renderGroup(el, sorted.filter(r => (r.mins||0) > t1 && (r.mins||0) <= t2),     `🔵 中區段 ( ${t1}–${t2} MIN )`, 'mid');
+  renderGroup(el, sorted.filter(r => (r.mins||0) > t2),                          `🟣 遠區段 ( > ${t2} MIN )`,      'far');
 }
 
 function renderGroup(container, list, label, bc) {
   const sec = document.createElement('div');
-  // 🌟 有趣的空狀態設計 (Empty State)
   if (!list.length) {
     sec.innerHTML = `
       <div class="sec-label">${label} <span class="sec-count">0</span></div>
       <div class="empty-group">
-        <div class="empty-emoji">🏜️</div>
-        <div class="empty-title">美食沙漠？</div>
-        <div>此區間沒有符合條件的餐廳<br>試著擴大預算或換個交通方式吧</div>
+        <div class="empty-emoji">📡</div>
+        <div class="empty-title">查無訊號</div>
+        <div style="font-family:monospace">此區段未掃描到符合條件的目標<br>建議調整系統過濾參數</div>
       </div>`;
     container.appendChild(sec); return;
   }
   
-  const cards = list.slice(0, 12).map((r, i) => {
+  const cards = list.slice(0, 15).map((r, i) => {
     const ri    = allRestaurants.indexOf(r);
     const emoji = typeEmoji(r.types);
-    // 🌟 圖片加入 lazy-fade 漸進載入動畫
     const thumb = r.photos[0]
       ? `<img class="r-thumb lazy-fade" src="${r.photos[0]}" loading="lazy" alt="" onerror="this.outerHTML='<div class=\\'r-thumb-placeholder\\'>${emoji}</div>'">`
       : `<div class="r-thumb-placeholder">${emoji}</div>`;
-    const openTag = r.isOpen === true  ? '<span class="r-tag open">營業中</span>'
-                  : r.isOpen === false ? '<span class="r-tag closed">未營業</span>'
-                  :                     '<span class="r-tag unknown">確認中</span>';
-    const typeTag = r.types.length ? `<span class="r-tag">${r.types[0].replace(/_/g,' ')}</span>` : '';
+    const openTag = r.isOpen === true  ? '<span class="r-tag open">ONLINE</span>'
+                  : r.isOpen === false ? '<span class="r-tag closed">OFFLINE</span>'
+                  :                     '<span class="r-tag unknown">PENDING</span>';
+    const typeTag = r.types.length ? `<span class="r-tag">${r.types[0].replace(/_/g,' ').toUpperCase()}</span>` : '';
     return `<div class="r-card" style="animation-delay:${i*0.04}s" onclick="showDetail(${ri})">
       ${thumb}
       <div class="r-body">
         <div class="r-name">${r.name}</div>
-        <div class="r-tags"><span class="dbadge b-${bc}">${r.mins ?? '?'} 分鐘</span>${typeTag}${openTag}</div>
+        <div class="r-tags"><span class="dbadge b-${bc}">ETA ${r.mins ?? '?'}m</span>${typeTag}${openTag}</div>
         <div class="r-footer">
-          <span class="r-stars">${starsStr(r.rating)} ${r.rating||'—'}</span>
+          <span class="r-stars" style="color:var(--mb)">${starsStr(r.rating)} ${r.rating||'—'}</span>
           <span class="r-meta">${priceLevelStr(r.priceLevel)}</span>
         </div>
       </div>
@@ -646,44 +640,39 @@ function renderGroup(container, list, label, bc) {
   container.appendChild(sec);
 }
 
-/* ══════════════════════════════════════
-   Detail
-══════════════════════════════════════ */
 function showDetail(idx) {
   const r     = allRestaurants[idx];
   const emoji = typeEmoji(r.types);
   currentDetailPlace = r;
 
   const hero = document.getElementById('dHero');
-  // 🌟 Hero 圖片也加入 lazy-fade 漸進載入動畫
   hero.innerHTML = r.photos[0]
     ? `<img class="detail-hero-img lazy-fade" src="${r.photos[0]}" loading="lazy" alt="" onerror="this.outerHTML='<div class=\\'detail-hero-placeholder\\'>${emoji}</div>'">`
     : `<div class="detail-hero-placeholder">${emoji}</div>`;
 
   document.getElementById('dName').textContent    = r.name;
-  document.getElementById('dDist').textContent    = r.mins != null ? `${r.mins} 分鐘` : '';
-  document.getElementById('dRating').innerHTML    = `<span class="stars-lg">${starsStr(r.rating)}</span> ${r.rating||'—'}`;
-  document.getElementById('dReviews').textContent = r.reviews ? `${r.reviews.toLocaleString()} 則` : '—';
+  document.getElementById('dDist').textContent    = r.mins != null ? `ETA: ${r.mins} MIN` : '';
+  document.getElementById('dRating').innerHTML    = `<span class="stars-lg" style="color:var(--mb)">${starsStr(r.rating)}</span> ${r.rating||'—'}`;
+  document.getElementById('dReviews').textContent = r.reviews ? `${r.reviews.toLocaleString()} DATA` : '—';
   document.getElementById('dPrice').textContent   = priceLevelStr(r.priceLevel);
   document.getElementById('dAddr').textContent    = r.address || '—';
-  document.getElementById('dPhone').textContent   = '查詢中…';
+  document.getElementById('dPhone').textContent   = 'DECRYPTING…';
 
   const openBadge = document.getElementById('dOpenBadge');
   const setOpen   = v => {
-    openBadge.textContent = v === true ? '✓ 現在營業中' : v === false ? '✗ 目前未營業' : '';
-    openBadge.style.color = v === true ? '#3B6D11' : v === false ? '#A32D2D' : '';
+    openBadge.textContent = v === true ? '[ STATUS: ONLINE ]' : v === false ? '[ STATUS: OFFLINE ]' : '';
+    openBadge.style.color = v === true ? 'var(--mb)' : v === false ? 'var(--red)' : '';
   };
   setOpen(r.isOpen);
 
   const hoursEl = document.getElementById('dHours');
   hoursEl.innerHTML = r.weekdayText?.length
     ? renderHoursHTML(r.weekdayText)
-    : '<span style="color:var(--mg)">查詢中…</span>';
+    : '<span style="color:var(--mg)">DECRYPTING…</span>';
 
   const ph = document.getElementById('dPhotos');
   const renderPhotos = photos => {
     ph.innerHTML = photos.length
-      // 🌟 照片牆也加入 lazy-fade 漸進載入動畫
       ? photos.map(u => `<img class="lazy-fade" src="${u}" loading="lazy" alt="" onclick="openLightbox('${u}')" onerror="this.outerHTML='<div class=\\'photo-ph\\'>${emoji}<span>暫無</span></div>'">`).join('')
         + (photos.length < 3 ? Array(3-photos.length).fill(`<div class="photo-ph">${emoji}</div>`).join('') : '')
       : Array(3).fill(`<div class="photo-ph">${emoji}</div>`).join('');
@@ -701,19 +690,19 @@ function showDetail(idx) {
       fields: ['formatted_phone_number','opening_hours','photos','utc_offset_minutes']
     }, (res, status) => {
       if (status !== google.maps.places.PlacesServiceStatus.OK) {
-        document.getElementById('dPhone').textContent = '未提供';
-        if (!r.weekdayText) hoursEl.textContent = '未提供';
+        document.getElementById('dPhone').textContent = 'UNKNOWN';
+        if (!r.weekdayText) hoursEl.textContent = 'UNKNOWN';
         fetchReviewSummary(r); return;
       }
-      document.getElementById('dPhone').textContent = res?.formatted_phone_number || '未提供';
+      document.getElementById('dPhone').textContent = res?.formatted_phone_number || 'UNKNOWN';
 
       if (res?.opening_hours) {
         r.isOpen      = res.opening_hours.isOpen();
         r.weekdayText = res.opening_hours.weekday_text || null;
         setOpen(r.isOpen);
-        hoursEl.innerHTML = r.weekdayText ? renderHoursHTML(r.weekdayText) : '未提供';
+        hoursEl.innerHTML = r.weekdayText ? renderHoursHTML(r.weekdayText) : 'UNKNOWN';
       } else {
-        if (!r.weekdayText) hoursEl.textContent = '未提供';
+        if (!r.weekdayText) hoursEl.textContent = 'UNKNOWN';
       }
 
       if (res?.photos?.length) {
@@ -737,13 +726,10 @@ function renderHoursHTML(weekdayText) {
   const today  = new Date().getDay();
   const dayIdx = today === 0 ? 6 : today - 1;
   return weekdayText.map((d, i) =>
-    `<div class="${i === dayIdx ? 'hours-today' : ''}">${d}</div>`
+    `<div class="${i === dayIdx ? 'hours-today' : ''}" style="${i === dayIdx ? 'color:var(--mb);font-weight:bold;text-shadow:var(--glow)' : ''}">${d}</div>`
   ).join('');
 }
 
-/* ══════════════════════════════════════
-   AI Review Summary
-══════════════════════════════════════ */
 async function fetchReviewSummary(r) {
   const el = document.getElementById('dReviewSummary');
   const prompt =
@@ -760,39 +746,26 @@ async function fetchReviewSummary(r) {
     let txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g,'').trim();
     const obj = JSON.parse(txt);
     el.innerHTML =
-      `<div style="margin-bottom:6px;font-size:11px;color:var(--mg);letter-spacing:1px;text-transform:uppercase;">正面評價</div>` +
-      obj.pos.map(p => `<span class="review-tag pos">👍 ${p}</span>`).join('') +
-      `<div style="margin:10px 0 6px;font-size:11px;color:var(--mg);letter-spacing:1px;text-transform:uppercase;">負面評價</div>` +
-      obj.neg.map(n => `<span class="review-tag neg">👎 ${n}</span>`).join('');
+      `<div style="margin-bottom:6px;font-size:11px;color:var(--mb);letter-spacing:1px;text-transform:uppercase;">[ POSITIVE ]</div>` +
+      obj.pos.map(p => `<span class="review-tag pos">✓ ${p}</span>`).join('') +
+      `<div style="margin:10px 0 6px;font-size:11px;color:var(--red);letter-spacing:1px;text-transform:uppercase;">[ NEGATIVE ]</div>` +
+      obj.neg.map(n => `<span class="review-tag neg">✕ ${n}</span>`).join('');
   } catch(e) {
-    el.innerHTML = '<span style="font-size:13px;color:var(--mg);">評論摘要暫時無法取得</span>';
+    el.innerHTML = '<span style="font-size:13px;color:var(--mm);">[ ERROR ] 分析模組離線</span>';
   }
 }
 
-/* ══════════════════════════════════════
-   Lightbox
-══════════════════════════════════════ */
 function openLightbox(url) {
   document.getElementById('lightboxImg').src = url;
   document.getElementById('lightbox').classList.add('show');
 }
 function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
 
-/* ══════════════════════════════════════
-   Mock Data
-══════════════════════════════════════ */
 function getMockData(pg) {
   const items = [
     {n:'春水堂',     c:['taiwanese'],p:2,d:200,  o:true,  wt:['星期一: 10:00 – 22:00','星期二: 10:00 – 22:00','星期三: 10:00 – 22:00','星期四: 10:00 – 22:00','星期五: 10:00 – 22:00','星期六: 10:00 – 22:00','星期日: 10:00 – 22:00']},
     {n:'鼎王麻辣鍋', c:['chinese'],  p:3,d:550,  o:true,  wt:['星期一: 11:30 – 23:00','星期二: 11:30 – 23:00','星期三: 11:30 – 23:00','星期四: 11:30 – 23:00','星期五: 11:30 – 23:00','星期六: 11:30 – 23:00','星期日: 11:30 – 23:00']},
-    {n:'好初早餐',   c:['cafe'],     p:1,d:100,  o:false, wt:['星期一: 07:00 – 11:00','星期二: 07:00 – 11:00','星期三: 07:00 – 11:00','星期四: 07:00 – 11:00','星期五: 07:00 – 11:00','星期六: 07:00 – 11:00','星期日: 公休']},
-    {n:'老乾杯燒肉', c:['japanese'], p:3,d:900,  o:true,  wt:['星期一: 17:30 – 00:00','星期二: 17:30 – 00:00','星期三: 17:30 – 00:00','星期四: 17:30 – 00:00','星期五: 17:30 – 01:00','星期六: 17:30 – 01:00','星期日: 17:30 – 00:00']},
-    {n:'韓國村',     c:['korean'],   p:2,d:1200, o:true,  wt:['星期一: 11:00 – 21:00','星期二: 11:00 – 21:00','星期三: 11:00 – 21:00','星期四: 11:00 – 21:00','星期五: 11:00 – 21:30','星期六: 11:00 – 21:30','星期日: 11:00 – 21:00']},
     {n:'老張牛肉麵', c:['chinese'],  p:1,d:450,  o:true,  wt:['星期一: 10:30 – 20:00','星期二: 10:30 – 20:00','星期三: 公休','星期四: 10:30 – 20:00','星期五: 10:30 – 20:00','星期六: 10:30 – 20:00','星期日: 10:30 – 20:00']},
-    {n:'三媽臭臭鍋', c:['chinese'],  p:1,d:750,  o:false, wt:['星期一: 11:00 – 22:00','星期二: 11:00 – 22:00','星期三: 11:00 – 22:00','星期四: 11:00 – 22:00','星期五: 11:00 – 22:30','星期六: 11:00 – 22:30','星期日: 11:00 – 22:00']},
-    {n:'呷二嘴',     c:['taiwanese'],p:1,d:1500, o:true,  wt:['星期一: 13:00 – 22:30','星期二: 公休','星期三: 13:00 – 22:30','星期四: 13:00 – 22:30','星期五: 13:00 – 22:30','星期六: 13:00 – 22:30','星期日: 13:00 – 22:30']},
-    {n:'清新咖啡',   c:['cafe'],     p:2,d:2000, o:true,  wt:['星期一: 08:00 – 20:00','星期二: 08:00 – 20:00','星期三: 08:00 – 20:00','星期四: 08:00 – 20:00','星期五: 08:00 – 21:00','星期六: 08:00 – 21:00','星期日: 09:00 – 19:00']},
-    {n:'夜間拉麵',   c:['japanese'], p:2,d:800,  o:false, wt:['星期一: 20:00 – 03:00','星期二: 20:00 – 03:00','星期三: 20:00 – 03:00','星期四: 20:00 – 03:00','星期五: 20:00 – 04:00','星期六: 20:00 – 04:00','星期日: 20:00 – 03:00']},
   ];
   const spd = { '步行':80, '騎車':583, '開車':917 };
   return items.map((it, i) => {
