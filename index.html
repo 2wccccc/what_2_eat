@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WHAT2EAT 智慧餐廳推薦</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0ea5e9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3448/3448066.png">
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -187,6 +194,9 @@
       <div class="back-btn" id="detailBackBtn" onclick="showPage('searchPage')">← 返回</div>
     </div>
     <div class="detail-wrap">
+      
+      <div id="dAngryBanner" class="angry-banner" style="display:none;"></div>
+      
       <div class="detail-hero" id="dHero"></div>
       <div class="detail-card">
         <div class="d-header">
@@ -250,6 +260,16 @@
     </button>
   </div>
 
-</div><script src="app.js"></script>
+</div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
+    });
+  }
+</script>
+
+<script src="app.js"></script>
 </body>
 </html>
