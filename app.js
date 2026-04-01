@@ -302,7 +302,7 @@ function fetchTravelTimes(origins, destinations, travelMode) {
   });
 }
 
-// 🌟 修正：嘗試第一時間從 Places API 的基礎資料抓出營業狀態
+// 🌟 修正1：第一時間攔截原生 open_now，讓 90% 的店家直接顯示營業狀態
 function formatPlace(p) {
   const photos = [];
   if (p.photos?.length)
@@ -310,9 +310,14 @@ function formatPlace(p) {
       photos.push(p.photos[i].getUrl({ maxWidth: 400 }));
   
   let isOpen = null;
-  if (p.opening_hours && typeof p.opening_hours.isOpen === 'function') {
-    isOpen = p.opening_hours.isOpen();
-  } else if (p.business_status === 'CLOSED_TEMPORARILY' || p.business_status === 'CLOSED_PERMANENTLY') {
+  if (p.opening_hours) {
+    if (p.opening_hours.open_now !== undefined) {
+      isOpen = p.opening_hours.open_now;
+    } else if (typeof p.opening_hours.isOpen === 'function') {
+      try { isOpen = p.opening_hours.isOpen(); } catch(e){}
+    }
+  }
+  if (p.business_status === 'CLOSED_TEMPORARILY' || p.business_status === 'CLOSED_PERMANENTLY') {
     isOpen = false;
   }
 
@@ -329,36 +334,41 @@ function formatPlace(p) {
   };
 }
 
-// 🌟 修正：只去查詢「尚未確認狀態」的店家，並稍微加長延遲避免被 API 鎖定
+// 🌟 修正2：不限數量，背景逐一動態抓取未知的狀態，不卡死畫面
 function fetchOpenStatusBatch(list, svc) {
-  return new Promise(resolve => {
-    const needsFetch = list.filter(r => r.isOpen === null && r.placeId);
-    if (!svc || !needsFetch.length) { resolve(); return; }
+  const needsFetch = list.filter(r => r.isOpen === null && r.placeId);
+  if (!svc || !needsFetch.length) return;
 
-    const targetList = needsFetch.slice(0, 30); // 確保最多只額外打 30 次 API，避免卡住
-    let pending = targetList.length;
-
-    targetList.forEach((r, i) => {
-      setTimeout(() => {
-        svc.getDetails(
-          { placeId: r.placeId, fields: ['opening_hours', 'utc_offset_minutes', 'business_status'] },
-          (res, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK) {
-              if (res?.opening_hours) {
-                r.isOpen      = res.opening_hours.isOpen();
-                r.weekdayText = res.opening_hours.weekday_text || null;
-              } else if (res?.business_status === 'CLOSED_TEMPORARILY' || res?.business_status === 'CLOSED_PERMANENTLY') {
-                r.isOpen = false;
-              }
+  needsFetch.forEach((r, i) => {
+    // 使用 250ms 間隔慢慢打 API，避免 OVER_QUERY_LIMIT
+    setTimeout(() => {
+      svc.getDetails(
+        { placeId: r.placeId, fields: ['opening_hours', 'business_status'] },
+        (res, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK) {
+            if (res?.opening_hours) {
+              if (res.opening_hours.open_now !== undefined) r.isOpen = res.opening_hours.open_now;
+              if (typeof res.opening_hours.isOpen === 'function') try { r.isOpen = res.opening_hours.isOpen(); } catch(e){}
+            } else if (res?.business_status === 'CLOSED_TEMPORARILY' || res?.business_status === 'CLOSED_PERMANENTLY') {
+              r.isOpen = false;
             }
-            if (--pending === 0) resolve();
+            
+            // 抓到資料後，動態更新一般搜尋的 DOM 標籤
+            const tag = document.getElementById(`open-tag-${r.placeId}`);
+            if (tag) {
+              tag.className = r.isOpen === true ? 'r-tag open' : (r.isOpen === false ? 'r-tag closed' : 'r-tag unknown');
+              tag.textContent = r.isOpen === true ? '營業中' : (r.isOpen === false ? '休息中' : '確認中');
+            }
+            // 動態更新 AI 搜尋的 DOM 標籤
+            const aiTag = document.getElementById(`ai-open-tag-${r.placeId}`);
+            if (aiTag) {
+              aiTag.className = r.isOpen === true ? 'r-tag open' : (r.isOpen === false ? 'r-tag closed' : 'r-tag unknown');
+              aiTag.textContent = r.isOpen === true ? '營業中' : (r.isOpen === false ? '休息中' : '確認中');
+            }
           }
-        );
-      }, i * 150); // 150ms 的安全間隔
-    });
-
-    // 設定安全超時時間，避免 API 卡死導致畫面一直轉圈圈
-    setTimeout(() => { resolve(); }, targetList.length * 150 + 1000);
+        }
+      );
+    }, i * 250); 
   });
 }
 
@@ -399,7 +409,6 @@ async function askAI() {
       })()
     ]);
     
-    // 🌟 修正：先過濾預算
     let list = raw.map(p => formatPlace(p));
     list = list.filter(r => budgetMatch(r.priceLevel, pg.budget));
 
@@ -417,14 +426,11 @@ async function askAI() {
       list.forEach(r => fallbackMins(r, pg));
     }
 
-    // 🌟 修正：先依照距離排序
     list.sort((a, b) => (a.mins || 0) - (b.mins || 0));
-
-    // 🌟 修正：只針對過濾排序後的最前面 25 家查確認狀態，確保精準
-    header.textContent = '確認店家營業狀態…';
-    await fetchOpenStatusBatch(list.slice(0, 25), aiPlacesService);
-
     aiRestaurants = list;
+
+    // 背景抓取未知狀態，不阻塞 AI 處理
+    fetchOpenStatusBatch(aiRestaurants, aiPlacesService);
 
     const listCtx  = aiRestaurants.length
       ? aiRestaurants.slice(0, 30).map((r, i) => {
@@ -488,8 +494,13 @@ function renderAIGroup(container, list, label, bc) {
   list.forEach(s => {
     const ri = aiRestaurants.findIndex(r => r.name === s.name);
     const clickable = ri >= 0;
-    const openTag = s.isOpen === true  ? '<span class="r-tag open">營業中</span>'
-                  : s.isOpen === false ? '<span class="r-tag closed">休息中</span>' : '';
+    
+    // 加入專屬 ID 以利背景更新
+    const openTagId = s.placeId ? `id="ai-open-tag-${s.placeId}"` : '';
+    const openTag = s.isOpen === true  ? `<span ${openTagId} class="r-tag open">營業中</span>`
+                  : s.isOpen === false ? `<span ${openTagId} class="r-tag closed">休息中</span>` 
+                  :                      `<span ${openTagId} class="r-tag unknown">確認中</span>`;
+
     const card = document.createElement('div');
     card.className = `ai-shop-card${clickable ? ' clickable' : ''}`;
     if (clickable) card.onclick = () => {
@@ -534,32 +545,31 @@ async function searchNearby() {
       placesService, new google.maps.LatLng(pg.lat, pg.lng), getRadius(pg.transport)
     );
     if (!combined.length) {
-      showErr('searchErrBanner', '搜尋無結果，啟用模擬數據');
+      showErr('searchErrBanner', '找不到附近餐廳，使用示範資料');
       allRestaurants = getMockData(pg); renderResults(allRestaurants); return;
     }
     
-    // 🌟 修正：先過濾預算，砍掉不需要的資料
     let list = combined.map(p => formatPlace(p));
     list = list.filter(r => budgetMatch(r.priceLevel, pg.budget));
 
-    // 🌟 修正：再計算交通時間
     const times = await fetchTravelTimes(
       [new google.maps.LatLng(pg.lat, pg.lng)],
       list.map(r => new google.maps.LatLng(r.lat, r.lng)),
       TRAVEL_MODE[pg.transport]
     ).catch(() => []);
+    
     list.forEach((r, i) => {
       if (times[i] != null) r.mins = times[i]; else fallbackMins(r, pg);
     });
 
-    // 🌟 修正：排好順序
     list.sort((a, b) => (a.mins || 0) - (b.mins || 0));
-
-    // 🌟 修正：最後才針對排好序的「前 30 家」精準查詢營業狀態
-    await fetchOpenStatusBatch(list.slice(0, 30), placesService);
-    
     allRestaurants = list;
+
+    // 🌟 先光速畫出 UI，不讓使用者等
     renderResults(allRestaurants);
+
+    // 🌟 背景靜默抓取剩餘「確認中」的狀態
+    fetchOpenStatusBatch(allRestaurants, placesService);
 
   } catch(e) {
     showErr('searchErrBanner', '系統連線異常，啟用模擬數據');
@@ -602,7 +612,7 @@ function pickRandom() {
 
 function renderResults(list) {
   const pg = state.search;
-  const sorted = list; // 🌟 已經在上一動過濾與排序完了
+  const sorted = list; 
   
   const t1 = sorted[Math.floor(sorted.length/3)]?.mins   || 10;
   const t2 = sorted[Math.floor(sorted.length*2/3)]?.mins || 20;
@@ -641,10 +651,15 @@ function renderGroup(container, list, label, bc) {
     const thumb = r.photos[0]
       ? `<img class="r-thumb lazy-fade" src="${r.photos[0]}" loading="lazy" alt="" onerror="this.outerHTML='<div class=\\'r-thumb-placeholder\\'>${emoji}</div>'">`
       : `<div class="r-thumb-placeholder">${emoji}</div>`;
-    const openTag = r.isOpen === true  ? '<span class="r-tag open">營業中</span>'
-                  : r.isOpen === false ? '<span class="r-tag closed">休息中</span>'
-                  :                     '<span class="r-tag unknown">確認中</span>';
+      
+    // 加入專屬 ID 以利背景更新
+    const openTagId = r.placeId ? `id="open-tag-${r.placeId}"` : '';
+    const openTag = r.isOpen === true  ? `<span ${openTagId} class="r-tag open">營業中</span>`
+                  : r.isOpen === false ? `<span ${openTagId} class="r-tag closed">休息中</span>`
+                  :                      `<span ${openTagId} class="r-tag unknown">確認中</span>`;
+                  
     const typeTag = r.types.length ? `<span class="r-tag">${r.types[0].replace(/_/g,' ')}</span>` : '';
+    
     return `<div class="r-card" style="animation-delay:${i*0.04}s" onclick="showDetail(${ri})">
       ${thumb}
       <div class="r-body">
@@ -662,6 +677,9 @@ function renderGroup(container, list, label, bc) {
   container.appendChild(sec);
 }
 
+/* ══════════════════════════════════════
+   Detail
+══════════════════════════════════════ */
 function showDetail(idx) {
   const r     = allRestaurants[idx];
   const emoji = typeEmoji(r.types);
