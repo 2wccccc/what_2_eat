@@ -164,6 +164,7 @@ function loadGMaps() {
     document.head.appendChild(s);
   });
 }
+
 function createHiddenMap(lat, lng) {
   const div = Object.assign(document.createElement('div'), {
     style: 'width:1px;height:1px;position:absolute;top:-9999px'
@@ -178,7 +179,6 @@ async function initMap() {
     await loadGMaps();
     const lat = state.search.lat || 24.1477;
     const lng = state.search.lng || 120.6736;
-    // 🌟 移除了暗黑地圖，還原乾淨明亮的預設風格，保證地圖清晰呈現
     mapInstance = new google.maps.Map(document.getElementById('googleMap'), {
       center: { lat, lng }, zoom: 15, mapTypeControl: false, fullscreenControl: false
     });
@@ -253,7 +253,6 @@ function typeEmoji(types) {
   return '🍽️';
 }
 
-// 🌟 多重平行搜尋：保證抓到外帶和小吃
 function nearbySearchBoth(svc, location, radius) {
   return new Promise(resolve => {
     const queries = [
@@ -303,43 +302,63 @@ function fetchTravelTimes(origins, destinations, travelMode) {
   });
 }
 
+// 🌟 修正：嘗試第一時間從 Places API 的基礎資料抓出營業狀態
 function formatPlace(p) {
   const photos = [];
   if (p.photos?.length)
     for (let i = 0; i < Math.min(p.photos.length, 5); i++)
       photos.push(p.photos[i].getUrl({ maxWidth: 400 }));
+  
+  let isOpen = null;
+  if (p.opening_hours && typeof p.opening_hours.isOpen === 'function') {
+    isOpen = p.opening_hours.isOpen();
+  } else if (p.business_status === 'CLOSED_TEMPORARILY' || p.business_status === 'CLOSED_PERMANENTLY') {
+    isOpen = false;
+  }
+
   return {
     placeId: p.place_id, name: p.name,
     lat: p.geometry.location.lat(), lng: p.geometry.location.lng(),
     dist: null, mins: null,
     rating: p.rating ?? 0, reviews: p.user_ratings_total ?? 0,
     priceLevel: p.price_level,
-    isOpen: null,
+    isOpen: isOpen,
     weekdayText: null,
     types: (p.types||[]).filter(t => !['food','point_of_interest','establishment'].includes(t)).slice(0, 2),
     photos, address: p.vicinity || '',
   };
 }
 
+// 🌟 修正：只去查詢「尚未確認狀態」的店家，並稍微加長延遲避免被 API 鎖定
 function fetchOpenStatusBatch(list, svc) {
   return new Promise(resolve => {
-    if (!svc || !list.length) { resolve(); return; }
-    let pending = list.length;
-    list.forEach((r, i) => {
-      if (!r.placeId) { if (--pending === 0) resolve(); return; }
+    const needsFetch = list.filter(r => r.isOpen === null && r.placeId);
+    if (!svc || !needsFetch.length) { resolve(); return; }
+
+    const targetList = needsFetch.slice(0, 30); // 確保最多只額外打 30 次 API，避免卡住
+    let pending = targetList.length;
+
+    targetList.forEach((r, i) => {
       setTimeout(() => {
         svc.getDetails(
-          { placeId: r.placeId, fields: ['opening_hours', 'utc_offset_minutes'] },
+          { placeId: r.placeId, fields: ['opening_hours', 'utc_offset_minutes', 'business_status'] },
           (res, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK && res?.opening_hours) {
-              r.isOpen      = res.opening_hours.isOpen();
-              r.weekdayText = res.opening_hours.weekday_text || null;
+            if (status === google.maps.places.PlacesServiceStatus.OK) {
+              if (res?.opening_hours) {
+                r.isOpen      = res.opening_hours.isOpen();
+                r.weekdayText = res.opening_hours.weekday_text || null;
+              } else if (res?.business_status === 'CLOSED_TEMPORARILY' || res?.business_status === 'CLOSED_PERMANENTLY') {
+                r.isOpen = false;
+              }
             }
             if (--pending === 0) resolve();
           }
         );
-      }, i * 120);
+      }, i * 150); // 150ms 的安全間隔
     });
+
+    // 設定安全超時時間，避免 API 卡死導致畫面一直轉圈圈
+    setTimeout(() => { resolve(); }, targetList.length * 150 + 1000);
   });
 }
 
@@ -351,6 +370,9 @@ function fallbackMins(r, pg) {
   r.mins = Math.max(1, Math.round(r.dist / spd[pg.transport]));
 }
 
+/* ══════════════════════════════════════
+   AI SEARCH
+══════════════════════════════════════ */
 async function askAI() {
   const inp = document.getElementById('aiInput').value.trim();
   if (!inp) return;
@@ -376,49 +398,53 @@ async function askAI() {
         return await nearbySearchBoth(aiPlacesService, new google.maps.LatLng(pg.lat, pg.lng), getRadius(pg.transport));
       })()
     ]);
-    aiRestaurants = raw.map(p => formatPlace(p));
-  } catch(e) { aiRestaurants = []; }
+    
+    // 🌟 修正：先過濾預算
+    let list = raw.map(p => formatPlace(p));
+    list = list.filter(r => budgetMatch(r.priceLevel, pg.budget));
 
-  if (aiRestaurants.length && distMatrixSvc) {
-    header.textContent = '計算交通時間…';
-    const times = await fetchTravelTimes(
-      [new google.maps.LatLng(pg.lat, pg.lng)],
-      aiRestaurants.map(r => new google.maps.LatLng(r.lat, r.lng)),
-      TRAVEL_MODE[pg.transport]
-    ).catch(() => []);
-    aiRestaurants.forEach((r, i) => {
-      if (times[i] != null) r.mins = times[i]; else fallbackMins(r, pg);
-    });
-  } else {
-    aiRestaurants.forEach(r => fallbackMins(r, pg));
-  }
+    if (list.length && distMatrixSvc) {
+      header.textContent = '計算交通時間…';
+      const times = await fetchTravelTimes(
+        [new google.maps.LatLng(pg.lat, pg.lng)],
+        list.map(r => new google.maps.LatLng(r.lat, r.lng)),
+        TRAVEL_MODE[pg.transport]
+      ).catch(() => []);
+      list.forEach((r, i) => {
+        if (times[i] != null) r.mins = times[i]; else fallbackMins(r, pg);
+      });
+    } else {
+      list.forEach(r => fallbackMins(r, pg));
+    }
 
-  aiRestaurants.sort((a, b) => (a.mins || 0) - (b.mins || 0));
+    // 🌟 修正：先依照距離排序
+    list.sort((a, b) => (a.mins || 0) - (b.mins || 0));
 
-  header.textContent = '確認店家營業狀態…';
-  await fetchOpenStatusBatch(aiRestaurants.slice(0, 15), aiPlacesService);
+    // 🌟 修正：只針對過濾排序後的最前面 25 家查確認狀態，確保精準
+    header.textContent = '確認店家營業狀態…';
+    await fetchOpenStatusBatch(list.slice(0, 25), aiPlacesService);
 
-  const filtered = aiRestaurants.filter(r => budgetMatch(r.priceLevel, pg.budget));
-  const listCtx  = filtered.length
-    ? filtered.slice(0, 40).map((r, i) => {
-        const openStr = r.isOpen === true ? '營業中' : r.isOpen === false ? '未營業' : '狀態未知';
-        return `${i+1}. ${r.name}｜${r.mins}分鐘｜評分${r.rating}｜${priceLevelStr(r.priceLevel)}｜${openStr}｜${r.types.join('/')}`;
-      }).join('\n')
-    : '（無資料，請根據台中市一般情況推薦）';
+    aiRestaurants = list;
 
-  const userPref = localStorage.getItem('what2eat_pref') || document.getElementById('userPref').value;
-  const prefCtx = userPref ? `使用者長期飲食偏好：「${userPref}」，請在推薦時將此條件納入考量。\n` : '';
+    const listCtx  = aiRestaurants.length
+      ? aiRestaurants.slice(0, 30).map((r, i) => {
+          const openStr = r.isOpen === true ? '營業中' : r.isOpen === false ? '未營業' : '狀態未知';
+          return `${i+1}. ${r.name}｜${r.mins}分鐘｜評分${r.rating}｜${priceLevelStr(r.priceLevel)}｜${openStr}｜${r.types.join('/')}`;
+        }).join('\n')
+      : '（無資料，請根據台中市一般情況推薦）';
 
-  const prompt =
-    `你是台灣美食推薦助理。使用者目前在台中市附近。\n` +
-    `交通：${pg.transport}，時段：${pg.meal}，預算上限：${pg.budget >= 1500 ? '不限' : pg.budget + '元'}。\n` +
-    `${currentWeatherCtx}\n${prefCtx}\n` +
-    `當下具體需求：「${inp}」\n\n附近真實餐廳清單：\n${listCtx}\n\n` +
-    `從清單中嚴選最符合上述所有條件的 3-5 間（優先選「營業中」的），只輸出 JSON（不要其他文字）：\n` +
-    `[{"name":"店名","mins":分鐘數,"rating":評分,"priceLevel":0-4,"isOpen":true/false/null,"desc":"20字內介紹為何推薦這家(需結合天氣或偏好)"}]`;
+    const userPref = localStorage.getItem('what2eat_pref') || document.getElementById('userPref').value;
+    const prefCtx = userPref ? `使用者長期飲食偏好：「${userPref}」，請在推薦時將此條件納入考量。\n` : '';
 
-  header.textContent = 'AI 認真思考中…';
-  try {
+    const prompt =
+      `你是台灣美食推薦助理。使用者目前在台中市附近。\n` +
+      `交通：${pg.transport}，時段：${pg.meal}，預算上限：${pg.budget >= 1500 ? '不限' : pg.budget + '元'}。\n` +
+      `${currentWeatherCtx}\n${prefCtx}\n` +
+      `當下具體需求：「${inp}」\n\n附近真實餐廳清單：\n${listCtx}\n\n` +
+      `從清單中嚴選最符合上述所有條件的 3-5 間（優先選「營業中」的），只輸出 JSON（不要其他文字）：\n` +
+      `[{"name":"店名","mins":分鐘數,"rating":評分,"priceLevel":0-4,"isOpen":true/false/null,"desc":"20字內介紹為何推薦這家(需結合天氣或偏好)"}]`;
+
+    header.textContent = 'AI 認真思考中…';
     const resp = await fetch(WORKER_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt })
@@ -489,6 +515,9 @@ function renderAIGroup(container, list, label, bc) {
   container.appendChild(sec);
 }
 
+/* ══════════════════════════════════════
+   GENERAL SEARCH 
+══════════════════════════════════════ */
 async function searchNearby() {
   const pg = state.search;
   if (!pg.lat) { pg.lat = 24.1477; pg.lng = 120.6736; }
@@ -508,20 +537,28 @@ async function searchNearby() {
       showErr('searchErrBanner', '搜尋無結果，啟用模擬數據');
       allRestaurants = getMockData(pg); renderResults(allRestaurants); return;
     }
-    allRestaurants = combined.map(p => formatPlace(p));
+    
+    // 🌟 修正：先過濾預算，砍掉不需要的資料
+    let list = combined.map(p => formatPlace(p));
+    list = list.filter(r => budgetMatch(r.priceLevel, pg.budget));
 
+    // 🌟 修正：再計算交通時間
     const times = await fetchTravelTimes(
       [new google.maps.LatLng(pg.lat, pg.lng)],
-      allRestaurants.map(r => new google.maps.LatLng(r.lat, r.lng)),
+      list.map(r => new google.maps.LatLng(r.lat, r.lng)),
       TRAVEL_MODE[pg.transport]
     ).catch(() => []);
-    allRestaurants.forEach((r, i) => {
+    list.forEach((r, i) => {
       if (times[i] != null) r.mins = times[i]; else fallbackMins(r, pg);
     });
 
-    allRestaurants.sort((a, b) => (a.mins || 0) - (b.mins || 0));
+    // 🌟 修正：排好順序
+    list.sort((a, b) => (a.mins || 0) - (b.mins || 0));
 
-    await fetchOpenStatusBatch(allRestaurants.slice(0, 20), placesService);
+    // 🌟 修正：最後才針對排好序的「前 30 家」精準查詢營業狀態
+    await fetchOpenStatusBatch(list.slice(0, 30), placesService);
+    
+    allRestaurants = list;
     renderResults(allRestaurants);
 
   } catch(e) {
@@ -564,10 +601,9 @@ function pickRandom() {
 }
 
 function renderResults(list) {
-  const pg       = state.search;
-  const filtered = list.filter(r => budgetMatch(r.priceLevel, pg.budget));
+  const pg = state.search;
+  const sorted = list; // 🌟 已經在上一動過濾與排序完了
   
-  const sorted   = [...filtered].sort((a,b) => (a.mins||0) - (b.mins||0));
   const t1 = sorted[Math.floor(sorted.length/3)]?.mins   || 10;
   const t2 = sorted[Math.floor(sorted.length*2/3)]?.mins || 20;
 
@@ -576,7 +612,7 @@ function renderResults(list) {
 
   const sum = document.createElement('div');
   sum.className = 'results-summary';
-  sum.textContent = `共 ${filtered.length} 間 · ${pg.transport} · ${pg.budget >= 1500 ? '預算不限' : '< $'+pg.budget}`;
+  sum.textContent = `共 ${sorted.length} 間 · ${pg.transport} · ${pg.budget >= 1500 ? '預算不限' : '< $'+pg.budget}`;
   el.appendChild(sum);
 
   document.getElementById('detailBackBtn').setAttribute('onclick', "showPage('searchPage')");
