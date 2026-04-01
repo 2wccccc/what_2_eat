@@ -57,9 +57,7 @@ nav {
 .logo span { color: var(--mb); }
 
 /* ── Landing ── */
-.landing-hero {
-  text-align: center; padding: 72px 24px 52px; position: relative; overflow: hidden;
-}
+.landing-hero { text-align: center; padding: 72px 24px 52px; position: relative; overflow: hidden; }
 .landing-hero::before {
   content: ''; position: absolute; inset: 0;
   background: radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.15) 0%, transparent 60%);
@@ -70,41 +68,25 @@ nav {
   animation: float 3s ease-in-out infinite; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.1));
 }
 @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-.landing-title {
-  font-size: 30px; font-weight: bold; color: var(--mt);
-  margin-bottom: 12px; line-height: 1.35; letter-spacing: 1px;
-}
+.landing-title { font-size: 30px; font-weight: bold; color: var(--mt); margin-bottom: 12px; line-height: 1.35; letter-spacing: 1px; }
 .landing-title span { color: var(--mb); }
-.landing-sub {
-  font-size: 15px; color: var(--mm); line-height: 1.75;
-  max-width: 300px; margin: 0 auto 36px;
-}
+.landing-sub { font-size: 15px; color: var(--mm); line-height: 1.75; max-width: 300px; margin: 0 auto 36px; }
 .landing-cta {
-  background: white; color: var(--mb); 
-  border: 1px solid var(--mb); border-radius: 8px; 
+  background: white; color: var(--mb); border: 1px solid var(--mb); border-radius: 8px; 
   padding: 14px 44px; font-size: 16px; font-weight: bold;
   font-family: var(--font); cursor: pointer; letter-spacing: 1px;
-  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.15);
-  transition: all var(--trans);
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.15); transition: all var(--trans);
 }
-.landing-cta:hover { 
-  background: var(--mb); color: white; 
-  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3); transform: translateY(-2px); 
-}
+.landing-cta:hover { background: var(--mb); color: white; box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3); transform: translateY(-2px); }
 .landing-cta:active { transform: scale(0.97); }
 
 .features { padding: 48px 20px; max-width: 480px; margin: 0 auto; }
-.features-title {
-  text-align: center; font-size: 12px; color: var(--mg); font-weight: bold;
-  margin-bottom: 24px; letter-spacing: 2px;
-}
+.features-title { text-align: center; font-size: 12px; color: var(--mg); font-weight: bold; margin-bottom: 24px; letter-spacing: 2px; }
 .feature-card {
   background: var(--bg-glass); border: 1px solid var(--bd);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border-radius: var(--r-md); padding: 18px 20px;
-  margin-bottom: 12px; display: flex; align-items: flex-start; gap: 16px;
-  opacity: 0; animation: fadeUp 0.5s ease forwards;
-  box-shadow: var(--shadow); transition: all var(--trans);
+  border-radius: var(--r-md); padding: 18px 20px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 16px;
+  opacity: 0; animation: fadeUp 0.5s ease forwards; box-shadow: var(--shadow); transition: all var(--trans);
 }
 .feature-card:nth-child(2){animation-delay:.08s}
 .feature-card:nth-child(3){animation-delay:.16s}
@@ -138,7 +120,7 @@ nav {
 .page.active { display: block; animation: pageIn 0.3s ease-out; }
 @keyframes pageIn { from{opacity:0;transform:translateY(15px)} to{opacity:1;transform:translateY(0)} }
 
-/* 🌟 地圖修正 */
+/* 🌟 地圖修正：保證佔滿螢幕 */
 #mapPage { height: calc(100vh - 52px - var(--tab-h)); display: none; flex-direction: column; }
 #mapPage.active { display: flex; }
 #googleMap { flex: 1; width: 100%; }
@@ -172,14 +154,11 @@ nav {
 
 /* Range Slider */
 input[type=range] {
-  -webkit-appearance: none; appearance: none;
-  height: 4px; background: var(--mg-l); border-radius: 2px; outline: none; cursor: pointer;
+  -webkit-appearance: none; appearance: none; height: 4px; background: var(--mg-l); border-radius: 2px; outline: none; cursor: pointer;
 }
 input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: white; border: 4px solid var(--mb);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15); cursor: pointer; transition: all var(--trans);
+  -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: white; border: 4px solid var(--mb); box-shadow: 0 2px 6px rgba(0,0,0,0.15); cursor: pointer; transition: all var(--trans);
 }
 
 /* Primary Button */
@@ -219,10 +198,7 @@ input[type=range]::-webkit-slider-thumb {
 
 .ai-result-box { padding: 0; }
 .ai-result-box.show { display: block; animation: pageIn 0.3s ease; }
-.ai-result-header {
-  background: var(--mb-p); padding: 12px 16px;
-  border-bottom: 1px solid var(--bd); font-size: 13px; color: var(--mb); font-weight: bold;
-}
+.ai-result-header { background: var(--mb-p); padding: 12px 16px; border-bottom: 1px solid var(--bd); font-size: 13px; color: var(--mb); font-weight: bold; }
 .ai-result-body { padding: 14px 16px; min-height: 80px; }
 .ai-group-label { font-size: 12px; font-weight: bold; color: var(--mm); padding: 14px 0 8px; display: flex; align-items: center; gap: 6px;}
 .ai-shop-card { padding: 12px 0; border-bottom: 1px dashed var(--mg-l); }
@@ -262,12 +238,23 @@ input[type=range]::-webkit-slider-thumb {
 .b-far  { border-color: var(--mm); color: var(--mm); }
 
 /* ══════════════════════
-   DETAIL PAGE (🌟 這裡已完美修復！)
+   DETAIL PAGE (🌟 已完美修復排版)
 ══════════════════════ */
 .back-row { padding: 14px 18px 8px; display: flex; align-items: center; gap: 8px; }
 .back-btn { cursor: pointer; color: var(--mm); font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 4px; transition: color var(--trans), transform var(--trans); }
 .back-btn:hover { color: var(--mb); transform: translateX(-3px); }
 .detail-wrap { margin: 4px 16px 28px; }
+
+/* 🌟 暴躁模式專屬橫幅 */
+.angry-banner {
+  background: var(--red); color: white; padding: 18px 16px;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  font-weight: bold; font-size: 15px; line-height: 1.6;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  margin-bottom: -12px; position: relative; z-index: 5;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
 .detail-hero { position: relative; border-radius: var(--r-lg) var(--r-lg) 0 0; overflow: hidden; }
 .detail-hero-img { width: 100%; height: 200px; object-fit: cover; background: var(--mg-l); display: block; }
 .detail-hero-placeholder { width: 100%; height: 160px; background: var(--mb-p); display: flex; align-items: center; justify-content: center; font-size: 56px; }
@@ -275,8 +262,7 @@ input[type=range]::-webkit-slider-thumb {
 .detail-card {
   background: var(--bg-glass); border: 1px solid var(--bd);
   border-radius: 0 0 var(--r-md) var(--r-md); border-top: none;
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: var(--shadow);
 }
 .d-header { padding: 16px 18px; border-bottom: 1px solid var(--bd); }
 .d-name { font-size: 22px; font-weight: bold; color: var(--mt); margin-bottom: 8px; }
@@ -308,68 +294,32 @@ input[type=range]::-webkit-slider-thumb {
 .review-tag.pos { background: rgba(16, 185, 129, 0.1); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.2); }
 .review-tag.neg { background: rgba(239, 68, 68, 0.1); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.2); }
 
-/* 🌟 Skeleton & Animations */
-.skeleton-card {
-  display: flex; gap: 14px; padding: 12px 16px; margin-bottom: 12px;
-  background: white; border: 1px solid var(--bd); border-radius: var(--r-md);
-}
-.sk-anim {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px;
-}
-
 /* ══════════════════════
    MAP PAGE (地圖搜尋列優化)
 ══════════════════════ */
 .map-search-bar {
-  padding: 12px 16px;
-  background: var(--bg-glass);
-  border-bottom: 1px solid var(--bd);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  position: relative;
-  z-index: 10;
+  padding: 12px 16px; background: var(--bg-glass); border-bottom: 1px solid var(--bd);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  display: flex; gap: 10px; align-items: center; position: relative; z-index: 10;
 }
 .map-search-input {
-  flex: 1;
-  background: white;
-  border: 1px solid var(--mg-l);
-  color: var(--mt);
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 14px;
-  font-family: var(--font);
-  outline: none;
-  transition: all var(--trans);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  flex: 1; background: white; border: 1px solid var(--mg-l); color: var(--mt);
+  border-radius: 8px; padding: 10px 14px; font-size: 14px; font-family: var(--font);
+  outline: none; transition: all var(--trans); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
-.map-search-input:focus {
-  border-color: var(--mb);
-  box-shadow: 0 0 0 3px var(--mb-p);
-}
+.map-search-input:focus { border-color: var(--mb); box-shadow: 0 0 0 3px var(--mb-p); }
 .map-search-btn {
-  background: var(--mb);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: bold;
-  cursor: pointer;
-  font-family: var(--font);
-  transition: all var(--trans);
-  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
+  background: var(--mb); color: white; border: none; border-radius: 8px;
+  padding: 10px 20px; font-size: 14px; font-weight: bold; cursor: pointer;
+  font-family: var(--font); transition: all var(--trans); box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
 }
-.map-search-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
-}
-.map-search-btn:active {
-  transform: scale(0.96);
-}
+.map-search-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4); }
+.map-search-btn:active { transform: scale(0.96); }
+
+
+/* 🌟 骨架屏 Skeleton */
+.skeleton-card { display: flex; gap: 14px; padding: 12px 16px; margin-bottom: 12px; background: white; border: 1px solid var(--bd); border-radius: var(--r-md); }
+.sk-anim { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
 
 /* 🌟 按鈕優化 */
 .action-row { display: flex; gap: 10px; margin-top: 14px; }
